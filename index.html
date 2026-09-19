@@ -42,13 +42,23 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    padding: 20px 32px;
+    padding: 16px 32px;
     border-bottom: 1px solid var(--border);
   }
   nav .logo{
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-family: var(--font-display);
     font-style: italic;
     font-size: 1.4rem;
+  }
+  nav .logo img{
+    height: 40px;
+    width: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
   }
   nav a{
     color: var(--ink-dim);
@@ -73,6 +83,15 @@
       url('https://picsum.photos/1600/1200?random=1');
     background-size: cover;
     background-position: center;
+  }
+  .hero-logo{
+    width: 110px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    border: 3px solid var(--accent);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   .hero h1{
     font-family: var(--font-display);
@@ -206,14 +225,26 @@
     max-width: 480px;
     display:flex;
     justify-content:space-between;
-    align-items:baseline;
+    align-items:center;
     margin-bottom: 18px;
+  }
+  header.game-header .game-brand{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header.game-header .game-brand img{
+    width: 38px;
+    height: 38px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
   }
   header.game-header h1{
     font-family: var(--font-display);
     font-style: italic;
     font-weight: 400;
-    font-size: 1.9rem;
+    font-size: 1.5rem;
     margin:0;
   }
   .streak{ text-align:right; line-height:1.1; }
@@ -420,11 +451,15 @@
 <!-- ============ LANDING PAGE ============ -->
 <div id="landing">
   <nav>
-    <div class="logo">English Learning Hub</div>
+    <div class="logo">
+      <img src="https://cdn.creativefabrica.com/2019/02/Monogram-EH-Logo-by-Greenlines-Studios.jpg" alt="EH Logo">
+      <span>English Learning Hub</span>
+    </div>
     <a href="#about">About</a>
   </nav>
 
   <section class="hero">
+    <img src="https://cdn.creativefabrica.com/2019/02/Monogram-EH-Logo-by-Greenlines-Studios.jpg" alt="EH Logo" class="hero-logo">
     <h1>English Learning Hub</h1>
     <p>The English learning hub for GCSE's</p>
     <div class="scroll-hint">scroll down ↓</div>
@@ -454,7 +489,10 @@
 <!-- ============ GAME SCREEN ============ -->
 <div id="gameScreen" class="hidden">
   <header class="game-header">
-    <h1>English Learning Hub</h1>
+    <div class="game-brand">
+      <img src="https://cdn.creativefabrica.com/2019/02/Monogram-EH-Logo-by-Greenlines-Studios.jpg" alt="EH Logo">
+      <h1>English Learning Hub</h1>
+    </div>
     <div class="streak">
       <div class="streak-number" id="streakCount">0</div>
       <div class="streak-label">streak</div>
@@ -496,7 +534,7 @@
       <button class="lb-rename-btn" id="lbRenameBtn">change name</button>
     </div>
     <div id="lbList"><p class="lb-status">Loading…</p></div>
-    <footer>Shows everyone's current streak, live. Only works once this page is deployed to real hosting — not on the claude.ai preview link.</footer>
+    <footer>Shows everyone's current streak, live. Only works once this page is deployed to real hosting — not on the preview link.</footer>
   </div>
 
   <!-- ===== CHESS ===== -->
@@ -525,8 +563,6 @@
    PART 1: LANDING PAGE -> PASSWORD MODAL -> GAME SCREEN
    ========================================================= */
 
-// Pick a fresh random image each time the page loads (Picsum ignores its
-// own cache when the seed changes, so Date.now() gives a new photo every visit).
 document.querySelector(".hero").style.backgroundImage =
   `linear-gradient(rgba(23,24,28,0.75), rgba(23,24,28,0.85)), url('https://picsum.photos/1600/1200?random=${Date.now()}')`;
 
@@ -539,7 +575,7 @@ const submitBtn = document.getElementById("submitBtn");
 const passInput = document.getElementById("passInput");
 const passError = document.getElementById("passError");
 
-const CODE = "1234"; // the password that unlocks the game
+const CODE = "1234";
 
 function openModal(){
   modalOverlayEl.classList.remove("hidden");
@@ -556,8 +592,8 @@ function checkCode(){
     closeModal();
     landingEl.style.display = "none";
     gameScreenEl.classList.remove("hidden");
-    startNewRound(); // begin the game fresh each time it's unlocked
-    ensurePlayerRow(); // register (or reconnect) this browser on the leaderboard
+    startNewRound();
+    ensurePlayerRow();
   } else {
     passError.textContent = "That's not right — try again.";
   }
@@ -571,7 +607,7 @@ passInput.addEventListener("keydown", (e) => {
 });
 
 /* =========================================================
-   PART 2: THE WORDLE GAME ITSELF (unchanged from before)
+   PART 2: THE WORDLE GAME ITSELF
    ========================================================= */
 
 const WORDS = [
@@ -603,7 +639,7 @@ let hintUsed = false;
 try {
   const saved = localStorage.getItem("endless_streak");
   if (saved !== null) streak = parseInt(saved, 10) || 0;
-} catch (e) { /* localStorage unavailable — just start at 0 */ }
+} catch (e) {}
 
 const boardEl = document.getElementById("board");
 const keyboardEl = document.getElementById("keyboard");
@@ -687,8 +723,6 @@ function handleKey(key){
 }
 
 document.addEventListener("keydown", (e) => {
-  // Ignore game key handling while the password modal is open, so typing
-  // "1234" into the password box doesn't also poke at the game board.
   if (!modalOverlayEl.classList.contains("hidden")) return;
   if (gameScreenEl.classList.contains("hidden")) return;
 
@@ -727,9 +761,6 @@ function scoreGuess(guess, answer){
   return result;
 }
 
-// Extra common 5-letter words that are fine as GUESSES but never appear
-// as an ANSWER (keeps the answer pool curated/simple while letting you
-// type a wider range of real words).
 const EXTRA_VALID_GUESSES = [
   "about","after","again","alone","along","among","broad","chair","cheap",
   "chest","chief","claim","clean","clear","climb","clock","cloth","coast",
@@ -839,8 +870,8 @@ function showMessage(text, cls){
 
 function saveStreak(){
   try { localStorage.setItem("endless_streak", String(streak)); }
-  catch (e) { /* ignore if storage isn't available */ }
-  syncStreakToLeaderboard(); // push the new streak to Supabase too
+  catch (e) {}
+  syncStreakToLeaderboard();
 }
 
 function endRound(){
@@ -874,7 +905,7 @@ function startNewRound(){
 }
 
 /* =========================================================
-   PART 3: GAME SWITCHER (Wordle <-> Scramble)
+   PART 3: GAME SWITCHER
    ========================================================= */
 
 function showWordle(){
@@ -898,7 +929,7 @@ function showScramble(){
   showLeaderboardBtn.classList.remove("active");
   showChessBtn.classList.remove("active");
   stopLeaderboardPolling();
-  startScrambleRound(); // fresh scramble each time you switch to this tab
+  startScrambleRound();
 }
 function showLeaderboard(){
   leaderboardPanelEl.classList.remove("hidden");
@@ -922,9 +953,6 @@ function showChess(){
   showScrambleBtn.classList.remove("active");
   showLeaderboardBtn.classList.remove("active");
   stopLeaderboardPolling();
-  // chessboard.js can't size itself correctly inside a display:none
-  // container, so we build the board the first time this tab is opened
-  // (when it's actually visible) rather than eagerly on page load.
   if (!chessGame){
     initChess();
   } else {
@@ -938,8 +966,6 @@ showChessBtn.addEventListener("click", showChess);
 
 /* =========================================================
    PART 4: SCRAMBLE GAME
-   Same word list as Wordle, but instead of guessing letter-by-letter,
-   you see the letters jumbled and have to type the real word.
    ========================================================= */
 
 const scrambleLettersEl = document.getElementById("scrambleLetters");
@@ -952,8 +978,6 @@ let scrambleWord = "";
 let scrambleHintUsed = false;
 let scrambleGameOver = false;
 
-// Shuffle a word's letters (Fisher-Yates), re-rolling if it happens to
-// come out unscrambled (rare, but possible for short words).
 function scramble(word){
   let letters = word.split("");
   let attempts = 0;
@@ -988,7 +1012,7 @@ function useScrambleHint(){
 scrambleHintBtn.addEventListener("click", useScrambleHint);
 
 function startScrambleRound(){
-  scrambleWord = pickWord(); // reuses the same WORDS pool + recent-word tracking
+  scrambleWord = pickWord();
   scrambleLettersEl.textContent = scramble(scrambleWord);
   scrambleInputEl.value = "";
   scrambleHintUsed = false;
@@ -1016,17 +1040,8 @@ scrambleInputEl.addEventListener("keydown", (e) => {
 
 /* =========================================================
    PART 5: LIVE LEADERBOARD (Supabase)
-   This is the ONLY part of the page that talks to the outside internet.
-   It will NOT work on a claude.ai artifact preview link (that hosting
-   blocks outgoing network calls on purpose) — it only works once this
-   file is deployed to real hosting (GitHub Pages, Netlify, etc.).
    ========================================================= */
 
-// --- Your Supabase project's public connection details ---
-// The anon/publishable key is SAFE to have visible in the page source —
-// it's designed for exactly this (a public webpage talking to your
-// database). It's not a secret password. Real protection comes from the
-// Row Level Security policy set up in the Supabase dashboard.
 const SUPABASE_URL = "https://oauvjmtbyjwcymnyuuas.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KMx14vJWNppHMuIdpD4CHg_znsCHFwJ";
 
@@ -1037,8 +1052,6 @@ const lbListEl = document.getElementById("lbList");
 
 let leaderboardPollTimer = null;
 
-// A tiny wrapper around Supabase's REST API. Every call needs the same
-// two headers, so we build them once here instead of repeating them.
 function supabaseHeaders(extra = {}){
   return {
     "apikey": SUPABASE_ANON_KEY,
@@ -1063,10 +1076,6 @@ function setRowId(id){
   try { localStorage.setItem("wordle_row_id", String(id)); } catch (e) {}
 }
 
-// Called once when the game unlocks. Makes sure this browser has a row
-// in the leaderboard table — asking for a name the first time, then
-// reusing the same row (by its database id, saved in localStorage) on
-// every visit after that instead of creating duplicates.
 async function ensurePlayerRow(){
   let name = getPlayerName();
   if (!name){
@@ -1075,7 +1084,7 @@ async function ensurePlayerRow(){
   }
   lbPlayerNameEl.textContent = "Playing as " + name;
 
-  if (getRowId()) return; // already have a row from a previous visit
+  if (getRowId()) return;
 
   try {
     const res = await fetch(SUPABASE_URL + "/rest/v1/Leaderboard", {
@@ -1093,12 +1102,10 @@ async function ensurePlayerRow(){
   }
 }
 
-// Called every time the streak changes (win or loss resets it) — pushes
-// the new number to this browser's existing row.
 async function syncStreakToLeaderboard(){
   const rowId = getRowId();
   if (!rowId){
-    await ensurePlayerRow(); // no row yet (e.g. first-ever round) — create it
+    await ensurePlayerRow();
     return;
   }
   try {
@@ -1119,7 +1126,7 @@ function renderLeaderboard(rows){
   }
   const myRowId = getRowId();
   lbListEl.innerHTML = rows.map((row, i) => {
-    const safeName = String(row.name || "Player").replace(/[<>&]/g, ""); // basic escaping
+    const safeName = String(row.name || "Player").replace(/[<>&]/g, "");
     const youTag = (row.id !== undefined && String(row.id) === myRowId) ? " (you)" : "";
     return `<div class="lb-row">
       <span class="lb-rank">#${i + 1}</span>
@@ -1139,13 +1146,13 @@ async function refreshLeaderboard(){
     const rows = await res.json();
     renderLeaderboard(rows);
   } catch (e) {
-    lbListEl.innerHTML = '<p class="lb-error">Couldn\'t load the leaderboard. This only works once the page is deployed to real hosting, not the claude.ai preview link.</p>';
+    lbListEl.innerHTML = '<p class="lb-error">Couldn\'t load the leaderboard. This only works once the page is deployed to real hosting, not the preview link.</p>';
   }
 }
 
 function startLeaderboardPolling(){
   stopLeaderboardPolling();
-  leaderboardPollTimer = setInterval(refreshLeaderboard, 5000); // refresh every 5s while this tab is open
+  leaderboardPollTimer = setInterval(refreshLeaderboard, 5000);
 }
 function stopLeaderboardPolling(){
   if (leaderboardPollTimer){
@@ -1174,9 +1181,6 @@ lbRenameBtn.addEventListener("click", async () => {
 
 /* =========================================================
    PART 6: CHESS
-   Local chess, either two-player or against a simple bot. chess.js
-   tracks the game state and enforces the rules; chessboard.js draws
-   the board and handles drag-and-drop.
    ========================================================= */
 
 const chessStatusEl = document.getElementById("chessStatus");
@@ -1189,14 +1193,14 @@ const chessDiffEasyBtn = document.getElementById("chessDiffEasyBtn");
 const chessDiffMediumBtn = document.getElementById("chessDiffMediumBtn");
 const chessDiffHardBtn = document.getElementById("chessDiffHardBtn");
 
-let chessGame = null;   // the chess.js instance (game rules/state)
-let chessBoard = null;  // the chessboard.js instance (visual board)
-let vsBot = false;      // false = two player on this device, true = you (White) vs the bot (Black)
-let botDifficulty = "easy"; // "easy" | "medium" | "hard"
+let chessGame = null;
+let chessBoard = null;
+let vsBot = false;
+let botDifficulty = "easy";
 
 function onChessDragStart(source, piece){
   if (chessGame.game_over()) return false;
-  if (vsBot && chessGame.turn() === "b") return false; // don't let the human move the bot's pieces
+  if (vsBot && chessGame.turn() === "b") return false;
   if ((chessGame.turn() === "w" && piece.startsWith("b")) ||
       (chessGame.turn() === "b" && piece.startsWith("w"))){
     return false;
@@ -1208,7 +1212,7 @@ function onChessDrop(source, target){
   if (move === null) return "snapback";
   updateChessStatus();
   if (vsBot && !chessGame.game_over() && chessGame.turn() === "b"){
-    setTimeout(makeBotMove, 300); // small delay so the bot's move doesn't feel instant/robotic
+    setTimeout(makeBotMove, 300);
   }
 }
 
@@ -1231,20 +1235,9 @@ function updateChessStatus(){
   chessStatusEl.textContent = status;
 }
 
-/* ---- A small chess "bot": minimax search with alpha-beta pruning ----
-   It looks a few moves ahead, scoring each resulting position by how
-   much material each side has (a captured queen is worth more than a
-   captured pawn, etc.), and picks the move that leads to the best score
-   for itself assuming you also play your best replies. This is a real,
-   if simple, search algorithm — not a lookup table or randomness. */
-
 const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-// How many moves ahead each difficulty looks. Easy doesn't search at
-// all — it just plays a random legal move, which is genuinely weak and
-// beatable. Medium and Hard use the minimax search below, just deeper.
 const DIFFICULTY_DEPTH = { easy: 0, medium: 2, hard: 3 };
 
-// Adds up material on the board: positive favours White, negative favours Black.
 function evaluateBoard(game){
   const board = game.board();
   let score = 0;
@@ -1258,9 +1251,6 @@ function evaluateBoard(game){
   return score;
 }
 
-// Standard minimax with alpha-beta pruning. maximizing = true means this
-// call is trying to get the HIGHEST score (White's turn), false means
-// trying to get the LOWEST score (Black's turn).
 function minimax(game, depth, alpha, beta, maximizing){
   if (depth === 0 || game.game_over()){
     return evaluateBoard(game);
@@ -1274,7 +1264,7 @@ function minimax(game, depth, alpha, beta, maximizing){
       best = Math.max(best, minimax(game, depth - 1, alpha, beta, false));
       game.undo();
       alpha = Math.max(alpha, best);
-      if (beta <= alpha) break; // prune — the other side would never let this branch happen
+      if (beta <= alpha) break;
     }
     return best;
   } else {
@@ -1290,9 +1280,6 @@ function minimax(game, depth, alpha, beta, maximizing){
   }
 }
 
-// Picks the bot's move. Easy just grabs a random legal move — no
-// evaluation at all. Medium/Hard search ahead with minimax, scoring
-// where each move leads and keeping the one best for Black (lowest score).
 function chooseBotMove(game){
   const moves = game.moves();
   const depth = DIFFICULTY_DEPTH[botDifficulty];
@@ -1346,7 +1333,7 @@ function resetChessGame(){
 chessResetBtn.addEventListener("click", resetChessGame);
 chessUndoBtn.addEventListener("click", () => {
   chessGame.undo();
-  if (vsBot) chessGame.undo(); // undo both the bot's move and your move, so it's back to your turn
+  if (vsBot) chessGame.undo();
   chessBoard.position(chessGame.fen());
   updateChessStatus();
 });
@@ -1373,10 +1360,6 @@ function setChessDifficulty(level, btn){
 chessDiffEasyBtn.addEventListener("click", () => setChessDifficulty("easy", chessDiffEasyBtn));
 chessDiffMediumBtn.addEventListener("click", () => setChessDifficulty("medium", chessDiffMediumBtn));
 chessDiffHardBtn.addEventListener("click", () => setChessDifficulty("hard", chessDiffHardBtn));
-
-// The board is built lazily, the first time the Chess tab is opened —
-// see showChess() above. That's what fixes the "board doesn't render"
-// issue, since building it while the tab is hidden gives it 0 width.
 
 updateStreakDisplay();
 </script>
