@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Learning Hub</title>
+<!-- Browser tab icon (Favicon) -->
+<link rel="icon" type="image/jpeg" href="https://cdn.creativefabrica.com/2019/02/Monogram-EH-Logo-by-Greenlines-Studios.jpg">
+
+<!-- Chess tab uses two well-known, MIT-licensed open-source libraries:
+     chess.js (Jeff Hlywa) handles the rules/move validation,
+     chessboard.js (Chris Oakman) draws the draggable board.
+     jQuery is required by chessboard.js. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<style>
+#chessBoardEl img{ max-width: none; }
+  /* ---------- DESIGN TOKENS ---------- */
+  :root{
+    --bg: #17181c;
+    --panel: #1f2126;
+    --ink: #eef0f2;
+    --ink-dim: #8b8f98;
+    --border: #34373e;
+    --correct: #4c9a5f;
+    --present: #c9a339;
+    --absent: #3a3d44;
+    --accent: #e8734a;
+    --font-display: 'Georgia', 'Times New Roman', serif;
+    --font-mono: 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+
+  /* Any element with class "hidden" disappears.
+     !important makes sure it beats rules like #chessPanel { display:flex } */
+  .hidden{ display:none !important; }
+
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  /* ---------- LANDING PAGE ---------- */
+  nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  nav .logo{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.4rem;
+  }
+  nav .logo img{
+    height: 40px;
+    width: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  nav a{
+    color: var(--ink-dim);
+    text-decoration:none;
+    font-size: 0.9rem;
+  }
+  nav a:hover{ color: var(--ink); }
+
+  .hero{
+    min-height: 80vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding: 40px 20px;
+    position: relative;
+    /* A random photo from Picsum each time the page loads. The dark
+       gradient overlay keeps the white text readable on top of it. */
+    background-image:
+      linear-gradient(rgba(23,24,28,0.75), rgba(23,24,28,0.85)),
+      url('https://picsum.photos/1600/1200?random=1');
+    background-size: cover;
+    background-position: center;
+  }
+  .hero-logo{
+    width: 110px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    border: 3px solid var(--accent);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .hero h1{
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight:400;
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    margin: 0 0 12px;
+  }
+  .hero p{
+    color: var(--ink-dim);
+    font-size: 1.1rem;
+    max-width: 420px;
+    margin: 0 0 28px;
+  }
+  .scroll-hint{
+    color: var(--ink-dim);
+    font-size: 0.8rem;
+    animation: bob 1.6s ease-in-out infinite;
+  }
+  @keyframes bob{
+    0%,100%{ transform: translateY(0); }
+    50%{ transform: translateY(8px); }
+  }
+
+  .about{
+    min-height: 70vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding: 60px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .about h2{
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 2rem;
+    margin: 0 0 14px;
+  }
+  .about p{
+    color: var(--ink-dim);
+    max-width: 480px;
+    line-height: 1.6;
+    margin: 0 0 28px;
+  }
+  .btn{
+    padding: 12px 28px;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 0.95rem;
+    cursor:pointer;
+  }
+  .btn:hover{ border-color: var(--accent); }
+
+  /* ---------- PASSWORD MODAL ---------- */
+  .modal-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 20px;
+    z-index: 50;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    width: 100%;
+    max-width: 320px;
+    text-align:center;
+  }
+  .modal h3{
+    margin: 0 0 6px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight:400;
+    font-size: 1.3rem;
+  }
+  .modal p{
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    margin: 0 0 18px;
+  }
+  .modal input{
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 1rem;
+    text-align:center;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+  }
+  .modal-error{
+    color: var(--present);
+    font-size: 0.8rem;
+    min-height: 18px;
+    margin-bottom: 10px;
+  }
+  .modal-actions{
+    display:flex;
+    gap: 8px;
+  }
+  .modal-actions button{ flex:1; }
+  .btn-secondary{
+    background: transparent;
+  }
+
+  /* ---------- GAME SCREEN ---------- */
+  #gameScreen{
+    min-height: 100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 24px 16px 40px;
+  }
+  #gameScreen.hidden{ display:none; }
+
+  header.game-header{
+    width:100%;
+    max-width: 480px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom: 18px;
+  }
+  header.game-header .game-brand{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header.game-header .game-brand img{
+    width: 38px;
+    height: 38px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  header.game-header h1{
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.5rem;
+    margin:0;
+  }
+  .streak{ text-align:right; line-height:1.1; }
+  .streak-number{ font-size: 1.6rem; font-weight:700; color: var(--accent); }
+  .streak-label{ font-size: 0.7rem; color: var(--ink-dim); text-transform: lowercase; }
+
+  .message{
+    min-height: 22px;
+    font-size: 0.9rem;
+    color: var(--ink-dim);
+    margin-bottom: 14px;
+    text-align:center;
+  }
+  .message.win{ color: var(--correct); }
+  .message.lose{ color: var(--present); }
+
+  #hintBtn{
+    display:block;
+    margin: 0 auto 16px;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 0.8rem;
+    cursor:pointer;
+  }
+  #hintBtn:disabled{ opacity: 0.4; cursor: default; }
+  #hintBtn:not(:disabled):hover{ border-color: var(--accent); }
+
+  /* ---------- GAME SWITCHER ---------- */
+  .game-switch{
+    display:flex;
+    flex-wrap: wrap;            /* 5 tabs wrap onto a 2nd line on small phones */
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .switch-btn{
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    cursor:pointer;
+  }
+  .switch-btn.active{
+    background: var(--panel);
+    color: var(--ink);
+    border-color: var(--accent);
+  }
+  #wordleGame.hidden, #scrambleGame.hidden, #leaderboardPanel.hidden{ display:none; }
+
+  /* ---------- LEADERBOARD ---------- */
+  #leaderboardPanel{
+    width: 100%;
+    max-width: 420px;
+  }
+  .lb-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom: 14px;
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+  }
+  .lb-rename-btn{
+    background:none;
+    border:none;
+    color: var(--accent);
+    font-size: 0.8rem;
+    cursor:pointer;
+    text-decoration: underline;
+  }
+  #lbList{ display:flex; flex-direction:column; gap: 6px; }
+
+  /* ---------- CHESS ---------- */
+  #chessPanel{ width: 100%; max-width: 420px; display:flex; flex-direction:column; align-items:center; }
+  .chess-status{ margin-bottom: 14px; font-size: 0.95rem; color: var(--ink-dim); text-align:center; }
+  #chessBoardEl{ width: 100%; max-width: 380px; margin-bottom: 16px; }
+  .chess-controls{ display:flex; gap: 10px; margin-bottom: 6px; }
+  .chess-mode-switch{ display:flex; gap: 8px; margin-bottom: 14px; }
+
+  /* Grid of 10 difficulty buttons, 2 per row */
+  #chessDifficultyRow{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 14px;
+  }
+  #chessDifficultyRow.hidden{ display: none; }
+
+  .diff-btn{
+    display: flex;
+    justify-content: space-between;  /* name on the left, ELO on the right */
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .diff-btn:hover{ border-color: var(--accent); }
+  .diff-btn.active{
+    background: var(--panel);
+    color: var(--ink);
+    border-color: var(--accent);
+  }
+  .diff-elo{
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .lb-row{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--panel);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .lb-rank{ width: 22px; color: var(--ink-dim); font-size:0.85rem; }
+  .lb-name{ flex:1; font-size: 0.95rem; }
+  .lb-streak{ font-weight:700; color: var(--accent); }
+  .lb-status, .lb-error{ color: var(--ink-dim); font-size: 0.85rem; text-align:center; padding: 20px 0; }
+
+  /* ---------- RUNNER ---------- */
+  #runnerPanel{
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #runnerPanel.hidden{ display: none; }
+
+  /* The canvas is drawn at 800x300 internally, but CSS scales it to fit the screen */
+  #runnerCanvas{
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    touch-action: manipulation;  /* stops double-tap zoom when tapping to jump */
+  }
+
+  /* ---------- SCRAMBLE GAME ---------- */
+  #scrambleGame{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    width: 100%;
+    max-width: 420px;
+  }
+  #scrambleLetters{
+    font-family: var(--font-mono);
+    font-size: 2.2rem;
+    font-weight:700;
+    letter-spacing: 6px;
+    text-transform:uppercase;
+    color: var(--accent);
+    margin: 10px 0 22px;
+    text-align:center;
+  }
+  #scrambleInput{
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 1.1rem;
+    text-align:center;
+    text-transform: lowercase;
+    margin-bottom: 12px;
+  }
+  #scrambleSubmitBtn{
+    width:100%;
+    margin-bottom: 14px;
+  }
+  #scrambleHintBtn{
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 0.8rem;
+    cursor:pointer;
+    margin-bottom: 16px;
+  }
+  #scrambleHintBtn:disabled{ opacity:0.4; cursor:default; }
+  #scrambleHintBtn:not(:disabled):hover{ border-color: var(--accent); }
+
+  #board{
+    display:grid;
+    grid-template-rows: repeat(6, 1fr);
+    gap: 6px;
+    margin-bottom: 22px;
+  }
+  .row{ display:grid; grid-template-columns: repeat(5, 56px); gap: 6px; justify-content:center; }
+  .tile{
+    width: 56px;
+    height: 56px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: var(--panel);
+    transition: transform 0.15s ease;
+  }
+  .tile.filled{ border-color: #565a63; }
+  .tile.correct{ background: var(--correct); border-color: var(--correct); }
+  .tile.present{ background: var(--present); border-color: var(--present); }
+  .tile.absent{ background: var(--absent); border-color: var(--absent); color: var(--ink-dim); }
+  .tile.pop{ transform: scale(1.08); }
+
+  #keyboard{ display:flex; flex-direction:column; gap: 6px; width: 100%; max-width: 480px; }
+  .krow{ display:flex; justify-content:center; gap: 5px; }
+  .key{
+    flex: 1;
+    max-width: 40px;
+    height: 46px;
+    border-radius: 4px;
+    border: none;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    user-select:none;
+    transition: background 0.1s ease;
+  }
+  .key:active{ background: #2a2d33; }
+  .key.wide{ max-width: 60px; font-size: 0.65rem; }
+  .key.correct{ background: var(--correct); color:#fff; }
+  .key.present{ background: var(--present); color:#1a1a1a; }
+  .key.absent{ background: var(--absent); color: var(--ink-dim); }
+
+  footer{ margin-top: 24px; font-size: 0.75rem; color: var(--ink-dim); text-align:center; max-width: 420px; }
+
+  @media (max-width: 380px){ .tile{ width: 15vw; height: 15vw; font-size: 1.3rem; } .row{ grid-template-columns: repeat(5, 15vw); } }
+</style>
+</head>
+<body>
+
+<!-- ============ LANDING PAGE ============ -->
+<div id="landing">
+  <nav>
+    <div class="logo">
+      <img src="https://cdn.creativefabrica.com/2019/02/Monogram-EH-Logo-by-Greenlines-Studios.jpg" alt="EH Logo">
+      <span>English Learning Hub</span>
+    </div>
+    <a href="#about">About</a>
+  </nav>
+
+  <section class="hero">
+    <img src="https://cdn.creativefabrica.com/2019/02/Monogram-EH-Logo-by-Greenlines-Studios.jpg" alt="EH Logo" class="hero-logo">
+    <h1>English Learning Hub</h1>
+    <p>The English learning hub for GCSE's</p>
+    <div class="scroll-hint">scroll down ↓</div>
+  </section>
+
+  <section class="about" id="about">
+    <h2>About</h2>
+    <p>A word-guessing game that never ends — every round is a fresh word. Enter the code below to play.</p>
+    <button class="btn" id="aboutBtn">Enter game</button>
+  </section>
+</div>
+
+<!-- ============ PASSWORD MODAL ============ -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <h3>Enter code</h3>
+    <p>Type the code to unlock the game.</p>
+    <input type="password" id="passInput" maxlength="10" placeholder="••••" autocomplete="off">
+    <div class="modal-error" id="passError"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+      <button class="btn" id="submitBtn">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GAME SCREEN ============ -->
+<div id="gameScreen" class="hidden">
+  <header class="game-header">
+    <div class="game-brand">
+      <img src="https://cdn.creativefabrica.com/2019/02/Monogram-EH-Logo-by-Greenlines-Studios.jpg" alt="EH Logo">
+      <h1>English Learning Hub</h1>
+    </div>
+    <div class="streak">
+      <div class="streak-number" id="streakCount">0</div>
+      <div class="streak-label">streak</div>
+    </div>
+  </header>
+
+  <div class="game-switch">
+    <button class="switch-btn active" id="showWordleBtn">Wordle</button>
+    <button class="switch-btn" id="showScrambleBtn">Scramble</button>
+    <button class="switch-btn" id="showLeaderboardBtn">Leaderboard</button>
+    <button class="switch-btn" id="showChessBtn">Chess</button>
+    <button class="switch-btn" id="showRunnerBtn">Runner</button>
+  </div>
+
+  <!-- ===== GAME 1: WORDLE ===== -->
+  <div id="wordleGame">
+    <div class="message" id="message">Guess the 5-letter word</div>
+    <button id="hintBtn">💡 Hint (1 left)</button>
+
+    <div id="board"></div>
+    <div id="keyboard"></div>
+
+    <footer>Type or tap letters, Enter to submit, Backspace to delete. A new word loads automatically after every round.</footer>
+  </div>
+
+  <!-- ===== GAME 2: SCRAMBLE ===== -->
+  <div id="scrambleGame" class="hidden">
+    <div class="message" id="scrambleMessage">Unscramble the word</div>
+    <div id="scrambleLetters"></div>
+    <input type="text" id="scrambleInput" autocomplete="off" placeholder="type your answer" maxlength="10">
+    <button class="btn" id="scrambleSubmitBtn">Submit</button>
+    <button id="scrambleHintBtn">💡 Hint (1 left)</button>
+    <footer>Unscramble the jumbled letters into a real word. Enter also submits. A new word loads after every round.</footer>
+  </div>
+
+  <!-- ===== LEADERBOARD ===== -->
+  <div id="leaderboardPanel" class="hidden">
+    <div class="lb-header">
+      <span id="lbPlayerName"></span>
+      <button class="lb-rename-btn" id="lbRenameBtn">change name</button>
+    </div>
+    <div id="lbList"><p class="lb-status">Loading…</p></div>
+    <footer>Shows everyone's current streak, live. Only works once this page is deployed to real hosting — not on the preview link.</footer>
+  </div>
+
+  <!-- ===== CHESS ===== -->
+  <div id="chessPanel" class="hidden">
+    <div class="chess-mode-switch">
+      <button class="switch-btn active" id="chessMode2pBtn">2 Player</button>
+      <button class="switch-btn" id="chessModeBotBtn">vs Bot</button>
+    </div>
+    <!-- Buttons get built by JavaScript from the BOT_LEVELS list -->
+    <div id="chessDifficultyRow" class="hidden"></div>
+    <div class="chess-status" id="chessStatus">White to move</div>
+    <div id="chessBoardEl"></div>
+    <div class="chess-controls">
+      <button class="btn btn-secondary" id="chessUndoBtn">Undo</button>
+      <button class="btn" id="chessResetBtn">New game</button>
+    </div>
+    <footer>Chess vs a friend or a bot. ELO numbers are rough estimates. Built with chess.js and chessboard.js (MIT licensed), by Jeff Hlywa and Chris Oakman.</footer>
+  </div>
+
+  <!-- ===== RUNNER ===== -->
+  <div id="runnerPanel" class="hidden">
+    <canvas id="runnerCanvas" width="800" height="300"></canvas>
+    <footer>Space, ↑ or tap to jump. Hold to jump higher. Grab coins for +50. It speeds up, and day turns to night, the longer you survive. M mutes the sound.</footer>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   PART 1: LANDING PAGE -> PASSWORD MODAL -> GAME SCREEN
+   ========================================================= */
+
+document.querySelector(".hero").style.backgroundImage =
+  `linear-gradient(rgba(23,24,28,0.75), rgba(23,24,28,0.85)), url('https://picsum.photos/1600/1200?random=${Date.now()}')`;
+
+const landingEl = document.getElementById("landing");
+const gameScreenEl = document.getElementById("gameScreen");
+const modalOverlayEl = document.getElementById("modalOverlay");
+const aboutBtn = document.getElementById("aboutBtn");
+const cancelBtn = document.getElementById("cancelBtn");
+const submitBtn = document.getElementById("submitBtn");
+const passInput = document.getElementById("passInput");
+const passError = document.getElementById("passError");
+
+const CODE = "1234";
+
+function openModal(){
+  modalOverlayEl.classList.remove("hidden");
+  passInput.value = "";
+  passError.textContent = "";
+  passInput.focus();
+}
+function closeModal(){
+  modalOverlayEl.classList.add("hidden");
+}
+
+function checkCode(){
+  if (passInput.value === CODE){
+    closeModal();
+    landingEl.style.display = "none";
+    gameScreenEl.classList.remove("hidden");
+    startNewRound();
+    ensurePlayerRow();
+  } else {
+    passError.textContent = "That's not right — try again.";
+  }
+}
+
+aboutBtn.addEventListener("click", openModal);
+cancelBtn.addEventListener("click", closeModal);
+submitBtn.addEventListener("click", checkCode);
+passInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") checkCode();
+});
+
+/* =========================================================
+   PART 2: THE WORDLE GAME ITSELF
+   ========================================================= */
+
+// new Set(...) removes duplicate words automatically ("mango" and "cider"
+// were in the list more than once)
+const WORDS = [...new Set([
+  "apple","brave","chalk","dance","eager","flame","grape","house","ivory","joker",
+  "knife","lemon","mango","noble","ocean","piano","quiet","river","stone","tiger",
+  "unity","vivid","whale","xerox","yield","zebra","angle","bloom","crane","drift",
+  "eagle","fable","glory","harsh","index","jolly","knack","lunar","mirth","north",
+  "olive","pride","quilt","reign","spark","trend","urban","vapor","witty","yacht",
+  "amber","blitz","cider","dwell","ember","fjord","grasp","hover","input","jumbo",
+  "kayak","lodge","mercy","nudge","orbit","plume","quirk","ridge","surge","tonic",
+  "ultra","vigil","wharf","yodel","zesty","adobe","brisk","cabin","dodge","elbow",
+  "fudge","gnome","honey","ideal","jelly","kneel","latch","merit","nifty","ounce",
+  "patio","quota","rally","sable","torch","usher","valid","wispy","adept","boast",
+  "cider","dusty","exalt","flint","gully","hasty","incur","jaunt","knelt","local",
+  "mango","nasal","opine","pearl","quash","raspy","shrug","tepid","using","vixen",
+  "waltz","yearn","zonal","amuse","bison","cameo","depot","every","frost","grimy",
+  "humid","icily","joint","kudos","lever","mango","naive","oxide","pivot","quake"
+])];
+
+let currentWord = "";
+let recentWords = [];
+let currentGuess = "";
+let guesses = [];
+let rowIndex = 0;
+let gameOver = false;
+let streak = 0;
+let hintUsed = false;
+
+try {
+  const saved = localStorage.getItem("endless_streak");
+  if (saved !== null) streak = parseInt(saved, 10) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const keyboardEl = document.getElementById("keyboard");
+const messageEl = document.getElementById("message");
+const streakEl = document.getElementById("streakCount");
+const hintBtn = document.getElementById("hintBtn");
+const showWordleBtn = document.getElementById("showWordleBtn");
+const showScrambleBtn = document.getElementById("showScrambleBtn");
+const showLeaderboardBtn = document.getElementById("showLeaderboardBtn");
+const showChessBtn = document.getElementById("showChessBtn");
+const chessPanelEl = document.getElementById("chessPanel");
+const wordleGameEl = document.getElementById("wordleGame");
+const scrambleGameEl = document.getElementById("scrambleGame");
+
+function buildBoard(){
+  boardEl.innerHTML = "";
+  for(let r = 0; r < 6; r++){
+    const row = document.createElement("div");
+    row.className = "row";
+    row.id = "row-" + r;
+    for(let c = 0; c < 5; c++){
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.id = `tile-${r}-${c}`;
+      row.appendChild(tile);
+    }
+    boardEl.appendChild(row);
+  }
+}
+
+const KEY_ROWS = [
+  "qwertyuiop".split(""),
+  "asdfghjkl".split(""),
+  ["Enter", ..."zxcvbnm".split(""), "Back"]
+];
+
+function buildKeyboard(){
+  keyboardEl.innerHTML = "";
+  KEY_ROWS.forEach(rowLetters => {
+    const krow = document.createElement("div");
+    krow.className = "krow";
+    rowLetters.forEach(k => {
+      const btn = document.createElement("button");
+      btn.className = "key" + (k.length > 1 ? " wide" : "");
+      btn.textContent = k === "Back" ? "⌫" : (k === "Enter" ? "Enter" : k);
+      btn.id = "key-" + k;
+      btn.addEventListener("click", () => handleKey(k === "Back" ? "Backspace" : (k === "Enter" ? "Enter" : k)));
+      krow.appendChild(btn);
+    });
+    keyboardEl.appendChild(krow);
+  });
+}
+
+function updateStreakDisplay(){ streakEl.textContent = streak; }
+
+function useHint(){
+  if (hintUsed || gameOver) return;
+  hintUsed = true;
+  const index = Math.floor(Math.random() * 5);
+  const letter = currentWord[index].toUpperCase();
+  showMessage(`Hint: letter ${index + 1} is "${letter}"`, "");
+  updateHintButton();
+}
+function updateHintButton(){
+  hintBtn.disabled = hintUsed || gameOver;
+  hintBtn.textContent = hintUsed ? "💡 Hint used" : "💡 Hint (1 left)";
+}
+hintBtn.addEventListener("click", useHint);
+
+function handleKey(key){
+  if (gameOver) return;
+  if (key === "Enter"){
+    submitGuess();
+  } else if (key === "Backspace"){
+    currentGuess = currentGuess.slice(0, -1);
+    renderCurrentRow();
+  } else if (/^[a-zA-Z]$/.test(key) && currentGuess.length < 5){
+    currentGuess += key.toLowerCase();
+    renderCurrentRow();
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (!modalOverlayEl.classList.contains("hidden")) return;
+  if (gameScreenEl.classList.contains("hidden")) return;
+  // Only handle keys when the Wordle tab is actually the one showing
+  // (otherwise typing in Scramble also types into Wordle in the background)
+  if (wordleGameEl.classList.contains("hidden")) return;
+
+  if (e.key === "Enter") handleKey("Enter");
+  else if (e.key === "Backspace") handleKey("Backspace");
+  else if (/^[a-zA-Z]$/.test(e.key)) handleKey(e.key);
+});
+
+function renderCurrentRow(){
+  for(let c = 0; c < 5; c++){
+    const tile = document.getElementById(`tile-${rowIndex}-${c}`);
+    const letter = currentGuess[c] || "";
+    tile.textContent = letter;
+    tile.classList.toggle("filled", letter !== "");
+  }
+}
+
+function scoreGuess(guess, answer){
+  const result = Array(5).fill("absent");
+  const answerLetters = answer.split("");
+  const guessLetters = guess.split("");
+  for(let i = 0; i < 5; i++){
+    if (guessLetters[i] === answerLetters[i]){
+      result[i] = "correct";
+      answerLetters[i] = null;
+    }
+  }
+  for(let i = 0; i < 5; i++){
+    if (result[i] === "correct") continue;
+    const idx = answerLetters.indexOf(guessLetters[i]);
+    if (idx !== -1){
+      result[i] = "present";
+      answerLetters[idx] = null;
+    }
+  }
+  return result;
+}
+
+const EXTRA_VALID_GUESSES = [
+  "about","after","again","alone","along","among","broad","chair","cheap",
+  "chest","chief","claim","clean","clear","climb","clock","cloth","coast",
+  "could","count","court","cover","crash","cream","crime","cross","crowd",
+  "crowd","crown","dozen","draft","drama","dream","dress","drink","drive",
+  "earth","empty","enjoy","enter","equal","event","exact","extra","faith",
+  "false","fault","favor","field","fifth","fight","final","first","fixed",
+  "flash","fleet","floor","fluid","focus","force","forth","forty","frame",
+  "fresh","front","fruit","funny","giant","given","goods","grand","grant",
+  "great","green","gross","group","guard","guess","guest","guide","happy",
+  "heart","heavy","horse","hotel","human","ideal","image","imply","inner",
+  "issue","judge","known","label","large","laser","later","laugh","layer",
+  "learn","least","leave","legal","level","light","limit","links","lists",
+  "loved","lower","lucky","lunch","major","match","maybe","means","media",
+  "metal","might","minor","mixed","model","money","month","moral","motor",
+  "mount","mouse","mouth","moved","music","needs","never","newly","night",
+  "novel","nurse","offer","often","order","other","ought","paint","panel",
+  "paper","party","peace","phase","phone","photo","piece","place","plain",
+  "plane","plant","plate","point","pound","power","press","price","pride",
+  "prize","proof","proud","prove","queen","radio","raise","range","rapid",
+  "ratio","reach","ready","refer","right","rigid","rival","round","route",
+  "royal","rural","safer","sauce","scale","scene","scope","score","sense",
+  "serve","seven","shall","shape","share","sharp","sheet","shelf","shell",
+  "shift","shirt","shock","shoot","short","sight","since","sixth","skill",
+  "sleep","slide","small","smart","smile","smoke","solid","solve","sorry",
+  "sound","south","space","speak","speed","spend","spent","split","sport",
+  "staff","stage","stake","stand","start","state","steam","steel","stick",
+  "stiff","still","stock","stone","store","storm","story","study","stuff",
+  "style","sugar","suite","super","sweet","table","taste","teach","thank",
+  "theme","there","thick","thing","think","third","those","three","threw",
+  "throw","tight","times","tired","title","today","topic","total","touch",
+  "tough","tower","track","trade","train","treat","trial","tribe","trick",
+  "tried","tries","truck","truly","trust","truth","twice","under","union",
+  "until","upper","upset","usual","value","video","virus","visit","vital",
+  "voice","waste","watch","water","weird","wheel","where","which","while",
+  "white","whole","whose","woman","world","worry","worse","worst","worth",
+  "would","write","wrong","young"
+];
+const VALID_GUESSES = new Set([...WORDS, ...EXTRA_VALID_GUESSES]);
+
+function submitGuess(){
+  if (currentGuess.length < 5){
+    showMessage("Not enough letters", "");
+    shakeRow();
+    return;
+  }
+
+  const scores = scoreGuess(currentGuess, currentWord);
+
+  scores.forEach((s, i) => {
+    const tile = document.getElementById(`tile-${rowIndex}-${i}`);
+    setTimeout(() => {
+      tile.classList.add(s, "pop");
+      setTimeout(() => tile.classList.remove("pop"), 150);
+    }, i * 120);
+  });
+
+  const rank = { none: -1, absent: 0, present: 1, correct: 2 };
+  scores.forEach((s, i) => {
+    const letter = currentGuess[i];
+    const keyEl = document.getElementById("key-" + letter);
+    if (!keyEl) return;
+    const current = keyEl.dataset.state || "none";
+    if (rank[s] > rank[current]){
+      keyEl.dataset.state = s;
+      keyEl.classList.remove("absent", "present", "correct");
+      keyEl.classList.add(s);
+    }
+  });
+
+  guesses.push(currentGuess);
+
+  const won = currentGuess === currentWord;
+  const roundDone = won || rowIndex === 5;
+
+  setTimeout(() => {
+    if (won){
+      streak++;
+      saveStreak();
+      updateStreakDisplay();
+      showMessage(`Got it! The word was "${currentWord.toUpperCase()}"`, "win");
+      endRound();
+    } else if (roundDone){
+      streak = 0;
+      saveStreak();
+      updateStreakDisplay();
+      showMessage(`Out of guesses — it was "${currentWord.toUpperCase()}"`, "lose");
+      endRound();
+    } else {
+      rowIndex++;
+      currentGuess = "";
+    }
+  }, 5 * 120 + 200);
+}
+
+function shakeRow(){
+  const row = document.getElementById("row-" + rowIndex);
+  row.style.transform = "translateX(-4px)";
+  setTimeout(() => { row.style.transform = "translateX(4px)"; }, 60);
+  setTimeout(() => { row.style.transform = "translateX(0)"; }, 120);
+}
+
+function showMessage(text, cls){
+  messageEl.textContent = text;
+  messageEl.className = "message" + (cls ? " " + cls : "");
+}
+
+function saveStreak(){
+  try { localStorage.setItem("endless_streak", String(streak)); }
+  catch (e) {}
+  syncStreakToLeaderboard();
+}
+
+function endRound(){
+  gameOver = true;
+  updateHintButton();
+  setTimeout(startNewRound, 1600);
+}
+
+function pickWord(){
+  let word;
+  do {
+    word = WORDS[Math.floor(Math.random() * WORDS.length)];
+  } while (recentWords.includes(word));
+  recentWords.push(word);
+  if (recentWords.length > 15) recentWords.shift();
+  return word;
+}
+
+function startNewRound(){
+  currentWord = pickWord();
+  currentGuess = "";
+  guesses = [];
+  rowIndex = 0;
+  gameOver = false;
+  hintUsed = false;
+
+  buildBoard();
+  buildKeyboard();
+  updateHintButton();
+  showMessage("Guess the 5-letter word", "");
+}
+
+/* =========================================================
+   PART 3: GAME SWITCHER
+   (each show___ function starts with hideRunner() so the
+   Runner game stops when you leave its tab)
+   ========================================================= */
+
+function showWordle(){
+  hideRunner();
+  wordleGameEl.classList.remove("hidden");
+  scrambleGameEl.classList.add("hidden");
+  leaderboardPanelEl.classList.add("hidden");
+  chessPanelEl.classList.add("hidden");
+  showWordleBtn.classList.add("active");
+  showScrambleBtn.classList.remove("active");
+  showLeaderboardBtn.classList.remove("active");
+  showChessBtn.classList.remove("active");
+  stopLeaderboardPolling();
+}
+function showScramble(){
+  hideRunner();
+  scrambleGameEl.classList.remove("hidden");
+  wordleGameEl.classList.add("hidden");
+  leaderboardPanelEl.classList.add("hidden");
+  chessPanelEl.classList.add("hidden");
+  showScrambleBtn.classList.add("active");
+  showWordleBtn.classList.remove("active");
+  showLeaderboardBtn.classList.remove("active");
+  showChessBtn.classList.remove("active");
+  stopLeaderboardPolling();
+  startScrambleRound();
+}
+function showLeaderboard(){
+  hideRunner();
+  leaderboardPanelEl.classList.remove("hidden");
+  wordleGameEl.classList.add("hidden");
+  scrambleGameEl.classList.add("hidden");
+  chessPanelEl.classList.add("hidden");
+  showLeaderboardBtn.classList.add("active");
+  showWordleBtn.classList.remove("active");
+  showScrambleBtn.classList.remove("active");
+  showChessBtn.classList.remove("active");
+  refreshLeaderboard();
+  startLeaderboardPolling();
+}
+function showChess(){
+  hideRunner();
+  chessPanelEl.classList.remove("hidden");
+  wordleGameEl.classList.add("hidden");
+  scrambleGameEl.classList.add("hidden");
+  leaderboardPanelEl.classList.add("hidden");
+  showChessBtn.classList.add("active");
+  showWordleBtn.classList.remove("active");
+  showScrambleBtn.classList.remove("active");
+  showLeaderboardBtn.classList.remove("active");
+  stopLeaderboardPolling();
+  if (!chessGame){
+    initChess();
+  } else {
+    chessBoard.resize();
+  }
+}
+showWordleBtn.addEventListener("click", showWordle);
+showScrambleBtn.addEventListener("click", showScramble);
+showLeaderboardBtn.addEventListener("click", showLeaderboard);
+showChessBtn.addEventListener("click", showChess);
+
+/* =========================================================
+   PART 4: SCRAMBLE GAME
+   ========================================================= */
+
+const scrambleLettersEl = document.getElementById("scrambleLetters");
+const scrambleInputEl = document.getElementById("scrambleInput");
+const scrambleMessageEl = document.getElementById("scrambleMessage");
+const scrambleSubmitBtn = document.getElementById("scrambleSubmitBtn");
+const scrambleHintBtn = document.getElementById("scrambleHintBtn");
+
+let scrambleWord = "";
+let scrambleHintUsed = false;
+let scrambleGameOver = false;
+
+function scramble(word){
+  let letters = word.split("");
+  let attempts = 0;
+  do {
+    for (let i = letters.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [letters[i], letters[j]] = [letters[j], letters[i]];
+    }
+    attempts++;
+  } while (letters.join("") === word && attempts < 10);
+  return letters.join("");
+}
+
+function showScrambleMessage(text, cls){
+  scrambleMessageEl.textContent = text;
+  scrambleMessageEl.className = "message" + (cls ? " " + cls : "");
+}
+
+function updateScrambleHintButton(){
+  scrambleHintBtn.disabled = scrambleHintUsed || scrambleGameOver;
+  scrambleHintBtn.textContent = scrambleHintUsed ? "💡 Hint used" : "💡 Hint (1 left)";
+}
+
+function useScrambleHint(){
+  if (scrambleHintUsed || scrambleGameOver) return;
+  scrambleHintUsed = true;
+  const index = Math.floor(Math.random() * scrambleWord.length);
+  const letter = scrambleWord[index].toUpperCase();
+  showScrambleMessage(`Hint: letter ${index + 1} is "${letter}"`, "");
+  updateScrambleHintButton();
+}
+scrambleHintBtn.addEventListener("click", useScrambleHint);
+
+function startScrambleRound(){
+  scrambleWord = pickWord();
+  scrambleLettersEl.textContent = scramble(scrambleWord);
+  scrambleInputEl.value = "";
+  scrambleHintUsed = false;
+  scrambleGameOver = false;
+  updateScrambleHintButton();
+  showScrambleMessage("Unscramble the word", "");
+}
+
+function submitScrambleGuess(){
+  if (scrambleGameOver) return;
+  const guess = scrambleInputEl.value.trim().toLowerCase();
+  if (guess === scrambleWord){
+    scrambleGameOver = true;
+    showScrambleMessage(`Correct! It was "${scrambleWord.toUpperCase()}"`, "win");
+    updateScrambleHintButton();
+    setTimeout(startScrambleRound, 1400);
+  } else {
+    showScrambleMessage("Not quite — try again", "lose");
+  }
+}
+scrambleSubmitBtn.addEventListener("click", submitScrambleGuess);
+scrambleInputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitScrambleGuess();
+});
+
+/* =========================================================
+   PART 5: LIVE LEADERBOARD (Supabase)
+   ========================================================= */
+
+const SUPABASE_URL = "https://oauvjmtbyjwcymnyuuas.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_KMx14vJWNppHMuIdpD4CHg_znsCHFwJ";
+
+const leaderboardPanelEl = document.getElementById("leaderboardPanel");
+const lbPlayerNameEl = document.getElementById("lbPlayerName");
+const lbRenameBtn = document.getElementById("lbRenameBtn");
+const lbListEl = document.getElementById("lbList");
+
+let leaderboardPollTimer = null;
+
+function supabaseHeaders(extra = {}){
+  return {
+    "apikey": SUPABASE_ANON_KEY,
+    "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+    "Content-Type": "application/json",
+    ...extra
+  };
+}
+
+function getPlayerName(){
+  let name = "";
+  try { name = localStorage.getItem("wordle_player_name") || ""; } catch (e) {}
+  return name;
+}
+function setPlayerName(name){
+  try { localStorage.setItem("wordle_player_name", name); } catch (e) {}
+}
+function getRowId(){
+  try { return localStorage.getItem("wordle_row_id"); } catch (e) { return null; }
+}
+function setRowId(id){
+  try { localStorage.setItem("wordle_row_id", String(id)); } catch (e) {}
+}
+
+async function ensurePlayerRow(){
+  let name = getPlayerName();
+  if (!name){
+    name = (prompt("Pick a name for the leaderboard:", "") || "Player").slice(0, 20);
+    setPlayerName(name);
+  }
+  lbPlayerNameEl.textContent = "Playing as " + name;
+
+  if (getRowId()) return;
+
+  try {
+    const res = await fetch(SUPABASE_URL + "/rest/v1/Leaderboard", {
+      method: "POST",
+      headers: supabaseHeaders({ "Prefer": "return=representation" }),
+      body: JSON.stringify({ name: name, streak: streak })
+    });
+    if (!res.ok) throw new Error("insert failed: " + res.status);
+    const rows = await res.json();
+    if (rows && rows[0] && rows[0].id !== undefined){
+      setRowId(rows[0].id);
+    }
+  } catch (e) {
+    console.error("Couldn't create leaderboard row:", e);
+  }
+}
+
+async function syncStreakToLeaderboard(){
+  const rowId = getRowId();
+  if (!rowId){
+    await ensurePlayerRow();
+    return;
+  }
+  try {
+    await fetch(SUPABASE_URL + "/rest/v1/Leaderboard?id=eq." + encodeURIComponent(rowId), {
+      method: "PATCH",
+      headers: supabaseHeaders(),
+      body: JSON.stringify({ streak: streak, updated_at: new Date().toISOString() })
+    });
+  } catch (e) {
+    console.error("Couldn't sync streak:", e);
+  }
+}
+
+function renderLeaderboard(rows){
+  if (!rows || rows.length === 0){
+    lbListEl.innerHTML = '<p class="lb-status">No one\'s played yet — be the first!</p>';
+    return;
+  }
+  const myRowId = getRowId();
+  lbListEl.innerHTML = rows.map((row, i) => {
+    const safeName = String(row.name || "Player").replace(/[<>&]/g, "");
+    const youTag = (row.id !== undefined && String(row.id) === myRowId) ? " (you)" : "";
+    return `<div class="lb-row">
+      <span class="lb-rank">#${i + 1}</span>
+      <span class="lb-name">${safeName}${youTag}</span>
+      <span class="lb-streak">${row.streak}</span>
+    </div>`;
+  }).join("");
+}
+
+async function refreshLeaderboard(){
+  try {
+    const res = await fetch(
+      SUPABASE_URL + "/rest/v1/Leaderboard?select=id,name,streak&order=streak.desc&limit=20",
+      { headers: supabaseHeaders() }
+    );
+    if (!res.ok) throw new Error("fetch failed: " + res.status);
+    const rows = await res.json();
+    renderLeaderboard(rows);
+  } catch (e) {
+    lbListEl.innerHTML = '<p class="lb-error">Couldn\'t load the leaderboard. This only works once the page is deployed to real hosting, not the preview link.</p>';
+  }
+}
+
+function startLeaderboardPolling(){
+  stopLeaderboardPolling();
+  leaderboardPollTimer = setInterval(refreshLeaderboard, 5000);
+}
+function stopLeaderboardPolling(){
+  if (leaderboardPollTimer){
+    clearInterval(leaderboardPollTimer);
+    leaderboardPollTimer = null;
+  }
+}
+
+lbRenameBtn.addEventListener("click", async () => {
+  const newName = (prompt("New name:", getPlayerName()) || "").slice(0, 20);
+  if (!newName) return;
+  setPlayerName(newName);
+  lbPlayerNameEl.textContent = "Playing as " + newName;
+  const rowId = getRowId();
+  if (rowId){
+    try {
+      await fetch(SUPABASE_URL + "/rest/v1/Leaderboard?id=eq." + encodeURIComponent(rowId), {
+        method: "PATCH",
+        headers: supabaseHeaders(),
+        body: JSON.stringify({ name: newName })
+      });
+      refreshLeaderboard();
+    } catch (e) { console.error(e); }
+  }
+});
+
+/* =========================================================
+   PART 6: CHESS
+   ========================================================= */
+
+const chessStatusEl = document.getElementById("chessStatus");
+const chessUndoBtn = document.getElementById("chessUndoBtn");
+const chessResetBtn = document.getElementById("chessResetBtn");
+const chessMode2pBtn = document.getElementById("chessMode2pBtn");
+const chessModeBotBtn = document.getElementById("chessModeBotBtn");
+const chessDifficultyRowEl = document.getElementById("chessDifficultyRow");
+
+let chessGame = null;
+let chessBoard = null;
+let vsBot = false;
+let botLevel = 0;   // which level is selected (0 = level 1, 9 = level 10)
+
+/* ---------- THE 10 BOT LEVELS ----------
+   depth   = how many moves ahead the bot looks
+   blunder = chance (0 to 1) it plays a random move instead of thinking
+   noise   = random wobble added to move scores (in centipawns: 100 = 1 pawn)
+   elo     = my rough estimate of its strength, shown on the button */
+const BOT_LEVELS = [
+  { name: "Rookie",   elo: 300,  depth: 1, blunder: 1.00, noise: 0   },
+  { name: "Beginner", elo: 500,  depth: 1, blunder: 0.35, noise: 200 },
+  { name: "Novice",   elo: 650,  depth: 1, blunder: 0.20, noise: 120 },
+  { name: "Casual",   elo: 800,  depth: 1, blunder: 0.08, noise: 60  },
+  { name: "Learner",  elo: 950,  depth: 2, blunder: 0.12, noise: 100 },
+  { name: "Club",     elo: 1100, depth: 2, blunder: 0.05, noise: 50  },
+  { name: "Solid",    elo: 1250, depth: 2, blunder: 0,    noise: 20  },
+  { name: "Sharp",    elo: 1400, depth: 3, blunder: 0.04, noise: 60  },
+  { name: "Strong",   elo: 1500, depth: 3, blunder: 0,    noise: 25  },
+  { name: "Boss",     elo: 1600, depth: 3, blunder: 0,    noise: 10  }
+];
+
+/* ---------- BUILD THE DIFFICULTY BUTTONS ----------
+   Instead of writing 10 buttons by hand in HTML, we loop over
+   BOT_LEVELS and make one button per level. */
+function buildDifficultyButtons(){
+  chessDifficultyRowEl.innerHTML = "";
+  BOT_LEVELS.forEach((level, i) => {
+    const btn = document.createElement("button");
+    btn.className = "diff-btn" + (i === botLevel ? " active" : "");
+    btn.innerHTML =
+      `<span class="diff-name">${i + 1}. ${level.name}</span>` +
+      `<span class="diff-elo">${level.elo}</span>`;
+
+    btn.addEventListener("click", () => {
+      botLevel = i;  // remember which level was picked
+      // Un-highlight every button, then highlight the clicked one
+      chessDifficultyRowEl.querySelectorAll(".diff-btn")
+        .forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+
+    chessDifficultyRowEl.appendChild(btn);
+  });
+}
+
+/* ---------- BOARD EVENTS ---------- */
+function onChessDragStart(source, piece){
+  if (chessGame.game_over()) return false;
+  if (vsBot && chessGame.turn() === "b") return false;
+  if ((chessGame.turn() === "w" && piece.startsWith("b")) ||
+      (chessGame.turn() === "b" && piece.startsWith("w"))){
+    return false;
+  }
+}
+
+function onChessDrop(source, target){
+  const move = chessGame.move({ from: source, to: target, promotion: "q" });
+  if (move === null) return "snapback";
+  updateChessStatus();
+
+  if (vsBot && !chessGame.game_over() && chessGame.turn() === "b"){
+    // Show a "thinking" message BEFORE the bot starts, because
+    // the bot's thinking blocks the page for a moment
+    const level = BOT_LEVELS[botLevel];
+    chessStatusEl.textContent = `${level.name} bot (${level.elo}) is thinking…`;
+    setTimeout(makeBotMove, 300);
+  }
+}
+
+function onChessSnapEnd(){
+  chessBoard.position(chessGame.fen());
+}
+
+function updateChessStatus(){
+  let status = "";
+  const turnColor = chessGame.turn() === "w" ? "White" : "Black";
+
+  if (chessGame.in_checkmate()){
+    status = `Checkmate — ${chessGame.turn() === "w" ? "Black" : "White"} wins`;
+  } else if (chessGame.in_draw()){
+    status = "Draw";
+  } else {
+    status = `${turnColor} to move`;
+    if (chessGame.in_check()) status += " — check!";
+  }
+  chessStatusEl.textContent = status;
+}
+
+/* ---------- THE BOT'S BRAIN ---------- */
+
+// Piece values in centipawns (100 = one pawn)
+const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
+
+// Small bonus for putting pieces on good squares.
+// row/col come from game.board(): row 0 = rank 8 (top), row 7 = rank 1.
+function positionBonus(piece, row, col){
+  // closeness: 3 = one of the 4 centre squares, 0 = the edge of the board
+  const closeness = 3.5 - Math.max(Math.abs(row - 3.5), Math.abs(col - 3.5));
+
+  if (piece.type === "n" || piece.type === "b") return closeness * 10; // centralise
+  if (piece.type === "q") return closeness * 3;
+  if (piece.type === "p"){
+    // How many steps has this pawn moved? White pawns start on row 6, Black on row 1
+    const stepsForward = piece.color === "w" ? 6 - row : row - 1;
+    return stepsForward * 6 + closeness * 3;
+  }
+  return 0; // king and rooks get no bonus
+}
+
+// Score the whole board. Positive = good for White, negative = good for Black.
+function evaluateBoard(game){
+  const board = game.board();
+  let score = 0;
+  for (let row = 0; row < 8; row++){
+    for (let col = 0; col < 8; col++){
+      const piece = board[row][col];
+      if (!piece) continue;
+      const value = PIECE_VALUES[piece.type] + positionBonus(piece, row, col);
+      score += piece.color === "w" ? value : -value;
+    }
+  }
+  return score;
+}
+
+// Guess how good a move is BEFORE searching it (captures of big pieces first).
+// Searching good moves first lets alpha-beta skip lots of pointless work.
+function moveGuess(move){
+  let guess = 0;
+  if (move.captured) guess += 10 * PIECE_VALUES[move.captured] - PIECE_VALUES[move.piece];
+  if (move.promotion) guess += PIECE_VALUES[move.promotion];
+  return guess;
+}
+function orderMoves(moves){
+  return moves.sort((a, b) => moveGuess(b) - moveGuess(a));
+}
+
+// Minimax with alpha-beta pruning: looks `depth` moves ahead.
+// maximizing = true when it's White's turn (White wants a high score).
+function minimax(game, depth, alpha, beta, maximizing){
+  if (depth === 0) return evaluateBoard(game);
+
+  const moves = orderMoves(game.moves({ verbose: true }));
+
+  // No legal moves means checkmate (huge score) or stalemate (0)
+  if (moves.length === 0){
+    if (game.in_check()) return maximizing ? -100000 - depth : 100000 + depth;
+    return 0;
+  }
+
+  if (maximizing){
+    let best = -Infinity;
+    for (const move of moves){
+      game.move(move);
+      best = Math.max(best, minimax(game, depth - 1, alpha, beta, false));
+      game.undo();
+      alpha = Math.max(alpha, best);
+      if (beta <= alpha) break;   // pruning: this branch can't matter, skip it
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const move of moves){
+      game.move(move);
+      best = Math.min(best, minimax(game, depth - 1, alpha, beta, true));
+      game.undo();
+      beta = Math.min(beta, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+
+// Pick the bot's move (the bot always plays Black)
+function chooseBotMove(game){
+  const level = BOT_LEVELS[botLevel];
+  const moves = game.moves({ verbose: true });
+
+  // Dial 1: sometimes just play a random move (a "blunder")
+  if (Math.random() < level.blunder){
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
+
+  // Otherwise score every move by searching ahead
+  let bestMove = null;
+  let bestScore = Infinity;   // Black wants the LOWEST score
+  for (const move of orderMoves(moves)){
+    game.move(move);
+    // after Black moves it's White's turn, so maximizing = true
+    let score = minimax(game, level.depth - 1, -Infinity, Infinity, true);
+    game.undo();
+
+    // Dial 2: random wobble so weaker bots don't always find the best move
+    score += (Math.random() * 2 - 1) * level.noise;
+
+    if (score < bestScore){
+      bestScore = score;
+      bestMove = move;
+    }
+  }
+  return bestMove;
+}
+
+function makeBotMove(){
+  const move = chooseBotMove(chessGame);
+  if (move){
+    chessGame.move(move);
+    chessBoard.position(chessGame.fen());
+  }
+  updateChessStatus();
+}
+
+/* ---------- SETUP + BUTTONS ---------- */
+function initChess(){
+  chessGame = new Chess();
+  chessBoard = Chessboard("chessBoardEl", {
+    draggable: true,
+    position: "start",
+    onDragStart: onChessDragStart,
+    onDrop: onChessDrop,
+    onSnapEnd: onChessSnapEnd,
+    pieceTheme: "https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@master/website/img/chesspieces/wikipedia/{piece}.png"
+  });
+  updateChessStatus();
+}
+
+function resetChessGame(){
+  chessGame.reset();
+  chessBoard.start();
+  updateChessStatus();
+}
+
+chessResetBtn.addEventListener("click", resetChessGame);
+chessUndoBtn.addEventListener("click", () => {
+  chessGame.undo();
+  if (vsBot) chessGame.undo();   // undo the bot's move too
+  chessBoard.position(chessGame.fen());
+  updateChessStatus();
+});
+chessMode2pBtn.addEventListener("click", () => {
+  vsBot = false;
+  chessMode2pBtn.classList.add("active");
+  chessModeBotBtn.classList.remove("active");
+  chessDifficultyRowEl.classList.add("hidden");
+  resetChessGame();
+});
+chessModeBotBtn.addEventListener("click", () => {
+  vsBot = true;
+  chessModeBotBtn.classList.add("active");
+  chessMode2pBtn.classList.remove("active");
+  chessDifficultyRowEl.classList.remove("hidden");
+  resetChessGame();
+});
+
+buildDifficultyButtons();   // create the 10 buttons when the page loads
+
+/* =========================================================
+   PART 7: RUNNER GAME (everything is drawn with code on a <canvas>,
+   so there are no image files to download)
+   ========================================================= */
+
+const showRunnerBtn = document.getElementById("showRunnerBtn");
+const runnerPanelEl = document.getElementById("runnerPanel");
+const runnerCanvas = document.getElementById("runnerCanvas");
+const rctx = runnerCanvas.getContext("2d");   // the "pen" we draw with
+
+// ---------- SETTINGS (change these to tweak how the game feels!) ----------
+const R_W = 800;          // game width in game pixels
+const R_H = 300;          // game height
+const R_GROUND = 240;     // y of the ground line (0 = top of the canvas)
+const GRAVITY = 2200;     // pull-down strength (pixels per second squared)
+const JUMP_V = -700;      // jump strength (negative = upwards, y grows downwards)
+const DAY_LEN = 2400;     // score points for one full day/night cycle
+
+// Make the canvas sharp on high-resolution (retina) screens:
+// draw at 2x the pixels, then scale the drawing to match.
+(function sharpCanvas(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  runnerCanvas.width = R_W * dpr;
+  runnerCanvas.height = R_H * dpr;
+  rctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+})();
+
+/* ---------- SMALL HELPERS ---------- */
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+// mix two [r,g,b] colours: t=0 gives a, t=1 gives b
+const mixRGB = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+const rgb = a => `rgb(${a[0] | 0},${a[1] | 0},${a[2] | 0})`;
+// Repeatable "random" number from a whole number (same input = same output).
+// Great for scenery that must look the same every time you scroll past it.
+function hash(n){
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+// Path for a rounded rectangle
+function rr(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+/* ---------- SOUND (made with code, no audio files needed) ---------- */
+let audioCtx = null;
+let rMuted = false;
+try { rMuted = localStorage.getItem("runner_muted") === "1"; } catch (e) {}
+
+function getAudio(){
+  if (!audioCtx){
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { return null; }
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+// One beep that slides from frequency f0 to f1 and fades out
+function tone(f0, f1, dur, type, vol, delay){
+  if (rMuted) return;
+  const a = getAudio();
+  if (!a) return;
+  const t0 = a.currentTime + (delay || 0);
+  const osc = a.createOscillator();
+  const gain = a.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(f0, t0);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+  gain.gain.setValueAtTime(vol, t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  osc.connect(gain);
+  gain.connect(a.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.02);
+}
+function sfxJump(){ tone(320, 660, 0.14, "square", 0.045); }
+function sfxLand(){ tone(150, 60, 0.09, "sine", 0.09); }
+function sfxCoin(){ tone(880, 880, 0.07, "square", 0.04); tone(1320, 1320, 0.13, "square", 0.04, 0.07); }
+function sfxDie(){ tone(320, 40, 0.5, "sawtooth", 0.07); tone(130, 30, 0.4, "square", 0.05, 0.05); }
+function toggleMute(){
+  rMuted = !rMuted;
+  try { localStorage.setItem("runner_muted", rMuted ? "1" : "0"); } catch (e) {}
+}
+
+/* ---------- SKY COLOURS: day -> sunset -> night -> dawn -> day ... ---------- */
+const SKY = [
+  { top: [96, 176, 238], bot: [205, 236, 252] },   // day
+  { top: [74, 62, 138],  bot: [255, 153, 92]  },   // sunset
+  { top: [8, 11, 34],    bot: [32, 40, 88]    },   // night
+  { top: [70, 92, 156],  bot: [255, 196, 156] }    // dawn
+];
+function skyAt(phase){                              // phase: 0 to 1
+  const p = phase * 4;
+  const i = Math.floor(p) % 4;
+  const f = p - Math.floor(p);
+  const e = f * f * (3 - 2 * f);                    // smooth ease in/out
+  const a = SKY[i], b = SKY[(i + 1) % 4];
+  return { top: mixRGB(a.top, b.top, e), bot: mixRGB(a.bot, b.bot, e) };
+}
+
+// Fixed star positions and drifting clouds (made once)
+const STARS = Array.from({ length: 70 }, (_, i) => ({
+  x: hash(i + 1) * R_W, y: hash(i + 91) * 170, r: 0.5 + hash(i + 181) * 1.1, tw: hash(i + 271) * 6.28
+}));
+const clouds = Array.from({ length: 6 }, (_, i) => ({
+  x: i * 150 + hash(i + 3) * 80, y: 25 + hash(i + 13) * 85, s: 0.7 + hash(i + 23) * 0.9, sp: hash(i + 33)
+}));
+
+/* ---------- GAME STATE (everything that changes while playing) ---------- */
+let hero, obstacles, coinList, particles;
+let rSpeed, rScore, rCoins, spawnTimer, rScroll, animPhase;
+let rShake = 0, rFlash = 0, deathT = 0, deadVx = 0, squash = 1;
+let jumpBuffer = 0, jumpHeld = false, dustTimer = 0, rTime = 0, newBest = false;
+let rBest = 0;            // best score
+let rState = "ready";     // "ready" -> "playing" -> "over"
+let rOverAt = 0;          // when the game ended (short delay before restart)
+let rLast = 0;            // timestamp of the previous frame
+let rFrameId = null;      // id of the running animation loop, so we can stop it
+rScroll = 0;
+
+try { rBest = parseInt(localStorage.getItem("runner_best"), 10) || 0; } catch (e) {}
+
+function resetRunner(){
+  hero = { x: 90, y: R_GROUND - 52, w: 26, h: 52, vy: 0, onGround: true };
+  obstacles = [];
+  coinList = [];
+  particles = [];
+  rSpeed = 320;          // how fast the world moves left (pixels per second)
+  rScore = 0;
+  rCoins = 0;
+  spawnTimer = 1.1;      // seconds until the first obstacle
+  animPhase = 0;
+  rShake = 0; rFlash = 0; deathT = 0; deadVx = 0; squash = 1;
+  jumpBuffer = 0; dustTimer = 0; newBest = false;
+}
+resetRunner();
+
+/* ---------- PARTICLES (dust, sparks, shards, floating "+50" text) ---------- */
+function addParticle(p){
+  if (particles.length > 260) particles.shift();
+  particles.push(p);
+}
+function puffDust(x, y, n, power){
+  for (let i = 0; i < n; i++){
+    addParticle({
+      kind: "dust", x: x + (Math.random() - 0.5) * 8, y: y,
+      vx: -rSpeed * 0.7 + (Math.random() - 0.5) * 60 * power,
+      vy: -(15 + Math.random() * 50) * power, g: 30,
+      life: 0.35 + Math.random() * 0.25, max: 0.6, size: 2 + Math.random() * 3, grow: 5 + Math.random() * 5,
+      col: [214, 190, 150]
+    });
+  }
+}
+function burst(x, y, n, col, speed){
+  for (let i = 0; i < n; i++){
+    const a = Math.random() * Math.PI * 2, s = speed * (0.3 + Math.random());
+    addParticle({
+      kind: "spark", x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, g: 500,
+      life: 0.4 + Math.random() * 0.4, max: 0.8, size: 1.5 + Math.random() * 2, grow: 0, col: col
+    });
+  }
+}
+function updateParticles(dt){
+  for (let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0){ particles.splice(i, 1); continue; }
+    p.vy += p.g * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    if (p.rot !== undefined) p.rot += p.vr * dt;
+  }
+}
+function drawParticles(c){
+  particles.forEach(p => {
+    const k = clamp01(p.life / p.max);                    // 1 = fresh, 0 = gone
+    if (p.kind === "dust"){
+      c.globalAlpha = k * 0.55;
+      c.fillStyle = rgb(p.col);
+      c.beginPath();
+      c.arc(p.x, p.y, p.size + (1 - k) * p.grow, 0, 6.283);
+      c.fill();
+    } else if (p.kind === "spark"){
+      c.globalAlpha = k;
+      c.fillStyle = rgb(p.col);
+      c.beginPath();
+      c.arc(p.x, p.y, p.size * (0.4 + k * 0.6), 0, 6.283);
+      c.fill();
+    } else if (p.kind === "shard"){
+      c.globalAlpha = Math.min(1, k * 1.6);
+      c.save();
+      c.translate(p.x, p.y);
+      c.rotate(p.rot);
+      c.fillStyle = rgb(p.col);
+      c.fillRect(-p.size, -p.size * 0.5, p.size * 2, p.size);
+      c.restore();
+    } else if (p.kind === "text"){
+      c.globalAlpha = Math.min(1, k * 1.8);
+      c.fillStyle = "#ffe27a";
+      c.strokeStyle = "rgba(90,55,0,0.8)";
+      c.lineWidth = 3;
+      c.font = "800 16px system-ui, sans-serif";
+      c.textAlign = "center";
+      c.strokeText(p.text, p.x, p.y);
+      c.fillText(p.text, p.x, p.y);
+    }
+  });
+  c.globalAlpha = 1;
+}
+
+/* ---------- INPUT ---------- */
+function startJump(){
+  hero.vy = JUMP_V;
+  hero.onGround = false;
+  squash = 1.16;                                   // stretch tall when taking off
+  puffDust(hero.x + hero.w / 2, R_GROUND, 5, 1);
+  sfxJump();
+}
+function runnerJump(){
+  if (rState === "over"){
+    // Ignore presses for 0.5s so you don't restart by accident while mashing
+    if (performance.now() - rOverAt < 500) return;
+    resetRunner();
+    rState = "playing";
+    startJump();
+    return;
+  }
+  if (rState === "ready"){
+    resetRunner();
+    rState = "playing";
+    startJump();
+    return;
+  }
+  if (hero.onGround) startJump();
+  else jumpBuffer = 0.12;      // pressed a hair too early? we remember it and jump on landing
+}
+
+document.addEventListener("keydown", (e) => {
+  // Ignore keys unless the Runner tab is actually showing
+  if (runnerPanelEl.classList.contains("hidden")) return;
+  if (gameScreenEl.classList.contains("hidden")) return;
+  if (e.code === "Space" || e.code === "ArrowUp"){
+    e.preventDefault();                       // stop the page scrolling
+    if (e.repeat) return;                     // ignore held-down key repeats
+    jumpHeld = true;
+    runnerJump();
+  } else if (e.code === "KeyM"){
+    toggleMute();
+  }
+});
+document.addEventListener("keyup", (e) => {
+  if (e.code === "Space" || e.code === "ArrowUp") jumpHeld = false;
+});
+runnerCanvas.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  // Convert the tap position into game coordinates (the canvas may be scaled by CSS)
+  const r = runnerCanvas.getBoundingClientRect();
+  const px = (e.clientX - r.left) * (R_W / r.width);
+  const py = (e.clientY - r.top) * (R_H / r.height);
+  if (px < 50 && py < 50){ toggleMute(); return; }   // top-left speaker icon
+  jumpHeld = true;
+  runnerJump();
+});
+document.addEventListener("pointerup", () => { jumpHeld = false; });
+
+/* ---------- OBSTACLES ---------- */
+function makeObstacle(){
+  const r = Math.random();
+  const o = { x: R_W + 40, kind: "rock", j: [Math.random(), Math.random(), Math.random(), Math.random()] };
+  if (r < 0.30){
+    o.kind = "rock";   o.w = 38 + Math.random() * 22; o.h = 28 + Math.random() * 18; o.ix = 7; o.iy = 5;
+  } else if (r < 0.55){
+    o.kind = "cactus"; o.w = 34 + Math.random() * 10; o.h = 46 + Math.random() * 20; o.ix = 11; o.iy = 3;
+    o.rightArm = Math.random() < 0.6;
+  } else if (r < 0.75){
+    o.kind = "spikes"; o.w = 46 + Math.random() * 30; o.h = 26; o.ix = 5; o.iy = 6;
+  } else {
+    o.kind = "crates"; o.n = Math.random() < 0.4 ? 2 : 1; o.w = 40; o.h = 40 * o.n; o.ix = 3; o.iy = 2;
+  }
+  return o;
+}
+// The part of an obstacle that actually hurts you (a bit smaller than what's drawn)
+function obstacleHit(o){
+  return { x: o.x + o.ix, y: R_GROUND - o.h + o.iy, w: o.w - o.ix * 2, h: o.h - o.iy };
+}
+function rectsOverlap(a, b){
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/* ---------- GAME LOGIC ---------- */
+function endRunner(){
+  rState = "over";
+  rOverAt = performance.now();
+  deathT = 0;
+  hero.vy = -380;                 // little pop backwards
+  deadVx = -130;
+  rShake = 12;
+  rFlash = 0.55;
+  sfxDie();
+  // red + dark shards explode out of the hero
+  const cx = hero.x + hero.w / 2, cy = hero.y + hero.h / 2;
+  for (let i = 0; i < 26; i++){
+    const a = Math.random() * Math.PI * 2, s = 120 + Math.random() * 280;
+    addParticle({
+      kind: "shard", x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 120, g: 900,
+      life: 0.7 + Math.random() * 0.6, max: 1.2, size: 2 + Math.random() * 3, grow: 0,
+      col: Math.random() < 0.6 ? [217, 70, 60] : [45, 51, 82], rot: Math.random() * 6, vr: (Math.random() - 0.5) * 20
+    });
+  }
+  const finalScore = Math.floor(rScore);
+  if (finalScore > rBest){
+    rBest = finalScore;
+    newBest = finalScore > 0;
+    try { localStorage.setItem("runner_best", String(rBest)); } catch (e) {}
+  }
+}
+
+function updatePlaying(dt){
+  rSpeed = Math.min(720, rSpeed + 8 * dt);        // slowly speeds up
+  rScore += rSpeed * dt / 10;
+  animPhase += dt * (6 + rSpeed * 0.01);          // faster legs at higher speed
+
+  // --- jumping physics ---
+  // Holding the jump button while rising = lighter gravity = higher jump.
+  // Falling uses heavier gravity so the jump feels snappy.
+  let g = GRAVITY;
+  if (hero.vy < 0 && jumpHeld) g = GRAVITY * 0.8;
+  else if (hero.vy > 0) g = GRAVITY * 1.2;
+  hero.vy += g * dt;
+  hero.y += hero.vy * dt;
+  if (hero.y >= R_GROUND - hero.h){
+    hero.y = R_GROUND - hero.h;
+    if (!hero.onGround){                           // just landed
+      hero.onGround = true;
+      squash = 0.8;                                // squash flat on landing
+      puffDust(hero.x + hero.w / 2, R_GROUND, 7, 1.3);
+      sfxLand();
+    }
+    hero.vy = 0;
+    if (jumpBuffer > 0) startJump();
+  }
+  jumpBuffer = Math.max(0, jumpBuffer - dt);
+
+  // running dust kicked up by the feet
+  if (hero.onGround){
+    dustTimer -= dt;
+    if (dustTimer <= 0){ puffDust(hero.x + 6, R_GROUND, 1, 0.6); dustTimer = 0.07; }
+  }
+
+  // --- spawn obstacles (and sometimes an arc of coins above one) ---
+  spawnTimer -= dt;
+  if (spawnTimer <= 0){
+    const o = makeObstacle();
+    obstacles.push(o);
+    if (Math.random() < 0.45){
+      for (let i = 0; i < 5; i++){
+        const k = (i - 2) / 2;                                  // -1 to +1 across the arc
+        coinList.push({
+          x: o.x + o.w / 2 + (i - 2) * 34,
+          y: R_GROUND - (Math.min(o.h + 28, 92) + (1 - k * k) * 26),
+          ph: Math.random() * 6
+        });
+      }
+    }
+    // gap is at least 0.95s, longer than a jump lasts, so it's always possible
+    spawnTimer = 0.95 + Math.random() * 1.0;
+  }
+
+  // --- move the world ---
+  obstacles.forEach(o => { o.x -= rSpeed * dt; });
+  coinList.forEach(k => { k.x -= rSpeed * dt; });
+  obstacles = obstacles.filter(o => o.x + o.w > -10);
+  coinList = coinList.filter(k => k.x > -20);
+
+  // --- collisions ---
+  const hb = { x: hero.x + 5, y: hero.y + 6, w: hero.w - 10, h: hero.h - 8 };
+  for (const o of obstacles){
+    if (rectsOverlap(hb, obstacleHit(o))){ endRunner(); return; }
+  }
+  const hx = hero.x + hero.w / 2, hy = hero.y + hero.h / 2;
+  for (let i = coinList.length - 1; i >= 0; i--){
+    const k = coinList[i];
+    if (Math.hypot(k.x - hx, k.y - hy) < 26){
+      coinList.splice(i, 1);
+      rCoins++;
+      rScore += 50;
+      burst(k.x, k.y, 9, [255, 214, 90], 170);
+      addParticle({ kind: "text", text: "+50", x: k.x, y: k.y - 10, vx: 0, vy: -50, g: 0, life: 0.8, max: 0.8, size: 1, grow: 0, col: [255, 230, 120] });
+      sfxCoin();
+    }
+  }
+}
+
+function updateDead(dt){
+  deathT += dt;
+  hero.vy += GRAVITY * dt;
+  hero.y += hero.vy * dt;
+  hero.x += deadVx * dt;
+  deadVx *= Math.max(0, 1 - 2.5 * dt);
+  if (hero.y >= R_GROUND - hero.h){ hero.y = R_GROUND - hero.h; hero.vy = 0; deadVx *= 0.8; }
+}
+
+// dt = seconds since the last frame. Multiplying by dt means the game runs
+// at the same speed on a 60Hz and a 144Hz screen.
+function stepRunner(dt){
+  const worldSpeed = rState === "playing" ? rSpeed : (rState === "ready" ? 90 : 0);
+  rScroll += worldSpeed * dt;
+  clouds.forEach(cl => {
+    cl.x -= (8 + cl.sp * 8 + worldSpeed * 0.02) * dt;
+    if (cl.x < -90){ cl.x = R_W + 90; cl.y = 25 + Math.random() * 85; }
+  });
+
+  if (rState === "playing") updatePlaying(dt);
+  else if (rState === "over") updateDead(dt);
+  else animPhase += dt * 6;                       // idle jog on the title screen
+
+  squash += (1 - squash) * Math.min(1, dt * 14);  // squash/stretch eases back to normal
+  rShake = Math.max(0, rShake - dt * 28);
+  rFlash = Math.max(0, rFlash - dt * 2.2);
+  updateParticles(dt);
+}
+
+/* =========================================================
+   DRAWING
+   ========================================================= */
+
+// ---------- BACKGROUND ----------
+function drawSun(c, x, y){
+  const low = clamp01((y - 90) / 120);                    // 0 = high in the sky, 1 = at the horizon
+  const col = mixRGB([255, 244, 190], [255, 140, 70], low);
+  const cs = `${col[0] | 0},${col[1] | 0},${col[2] | 0}`;
+  const glow = c.createRadialGradient(x, y, 4, x, y, 95);
+  glow.addColorStop(0, `rgba(${cs},0.55)`);
+  glow.addColorStop(1, `rgba(${cs},0)`);
+  c.fillStyle = glow;
+  c.beginPath(); c.arc(x, y, 95, 0, 6.283); c.fill();
+  c.fillStyle = rgb(col);
+  c.beginPath(); c.arc(x, y, 22, 0, 6.283); c.fill();
+}
+function drawMoon(c, x, y){
+  const glow = c.createRadialGradient(x, y, 4, x, y, 60);
+  glow.addColorStop(0, "rgba(190,210,255,0.30)");
+  glow.addColorStop(1, "rgba(190,210,255,0)");
+  c.fillStyle = glow;
+  c.beginPath(); c.arc(x, y, 60, 0, 6.283); c.fill();
+  c.fillStyle = "#eef2ff";
+  c.beginPath(); c.arc(x, y, 16, 0, 6.283); c.fill();
+  c.fillStyle = "rgba(150,160,195,0.5)";                 // craters
+  c.beginPath(); c.arc(x - 5, y - 3, 3.2, 0, 6.283); c.fill();
+  c.beginPath(); c.arc(x + 5, y + 4, 2.4, 0, 6.283); c.fill();
+  c.beginPath(); c.arc(x + 2, y - 7, 1.8, 0, 6.283); c.fill();
+}
+function drawCloud(c, x, y, s, col, alpha){
+  c.globalAlpha = alpha;
+  c.fillStyle = col;
+  // one path with several circles, so overlaps don't double up the transparency
+  c.beginPath();
+  [[0, 0, 16], [20, -9, 20], [42, -2, 17], [62, 4, 12], [-16, 5, 11]].forEach(b => {
+    c.moveTo(x + b[0] * s + b[2] * s, y + b[1] * s);
+    c.arc(x + b[0] * s, y + b[1] * s, b[2] * s, 0, 6.283);
+  });
+  c.fill();
+  c.globalAlpha = 1;
+}
+// A row of mountains that scrolls slowly (far things move slower = feels 3D)
+function drawMountains(c, factor, base, amp, seed, color){
+  const off = rScroll * factor, k = 6.283185 / 1600;
+  c.fillStyle = color;
+  c.beginPath();
+  c.moveTo(-10, R_GROUND + 2);
+  for (let x = -10; x <= R_W + 10; x += 6){
+    const wx = x + off;
+    // "1 - |sin|" gives sharp peaks; the extra sines add bumpy detail.
+    // All frequencies are whole multiples of 1600 so the pattern repeats seamlessly.
+    const h = amp * 0.7 * (1 - Math.abs(Math.sin(wx * k + seed)))
+            + amp * 0.35 * Math.sin(wx * k * 3 + seed * 2.1)
+            + amp * 0.16 * Math.sin(wx * k * 8 + seed * 3.3);
+    c.lineTo(x, base - h);
+  }
+  c.lineTo(R_W + 10, R_GROUND + 2);
+  c.closePath();
+  c.fill();
+}
+function drawTrees(c, env){
+  const off = rScroll * 0.32, step = 78;
+  const col = rgb(mixRGB(env.bot, [18, 58, 44], 0.82));
+  const trunk = rgb(mixRGB(env.bot, [50, 34, 26], 0.85));
+  for (let i = Math.floor(off / step) - 1; i <= Math.floor((off + R_W) / step) + 1; i++){
+    if (hash(i + 9) < 0.28) continue;                       // leave some gaps
+    const x = i * step + hash(i) * 34 - off;
+    const h = 34 + hash(i + 50) * 34, w = 13 + hash(i + 70) * 7;
+    c.fillStyle = trunk;
+    c.fillRect(x - 1.5, R_GROUND - 5, 3, 5);
+    c.fillStyle = col;
+    for (let t = 0; t < 3; t++){                            // 3 stacked triangles = a pine tree
+      const ty = R_GROUND - 5 - t * h * 0.28, tw = w * (1 - t * 0.22) * 1.15;
+      c.beginPath();
+      c.moveTo(x - tw, ty); c.lineTo(x, ty - h * 0.5); c.lineTo(x + tw, ty);
+      c.closePath(); c.fill();
+    }
+  }
+}
+function shade(col, env){ return mixRGB(col, [12, 16, 36], env.night * 0.6); }   // darker at night
+
+function drawGround(c, env){
+  const gd = c.createLinearGradient(0, R_GROUND, 0, R_H);
+  gd.addColorStop(0, rgb(shade([128, 92, 60], env)));
+  gd.addColorStop(1, rgb(shade([62, 44, 32], env)));
+  c.fillStyle = gd;
+  c.fillRect(-20, R_GROUND, R_W + 40, R_H - R_GROUND + 20);
+
+  // pebbles and small roots in the dirt (scroll with the ground)
+  const off = rScroll;
+  for (let i = Math.floor(off / 38) - 1; i <= Math.floor((off + R_W) / 38) + 1; i++){
+    const x = i * 38 + hash(i + 7) * 30 - off, y = R_GROUND + 18 + hash(i + 17) * 36;
+    c.fillStyle = rgb(shade([150, 118, 86], env));
+    c.beginPath(); c.ellipse(x, y, 2 + hash(i + 27) * 3, 1.6 + hash(i + 37) * 1.6, 0, 0, 6.283); c.fill();
+    c.fillStyle = "rgba(0,0,0,0.18)";
+    c.beginPath(); c.ellipse(x + 1, y + 1.5, 2 + hash(i + 27) * 3, 1.2, 0, 0, 6.283); c.fill();
+  }
+
+  // grass strip on top with a lighter edge
+  c.fillStyle = rgb(shade([84, 156, 70], env));
+  c.fillRect(-20, R_GROUND, R_W + 40, 9);
+  c.fillStyle = rgb(shade([126, 198, 94], env));
+  c.fillRect(-20, R_GROUND, R_W + 40, 3);
+  // little grass blades sticking up
+  c.fillStyle = rgb(shade([112, 186, 84], env));
+  for (let i = Math.floor(off / 14) - 1; i <= Math.floor((off + R_W) / 14) + 1; i++){
+    const x = i * 14 - off, h = 3 + hash(i + 3) * 6;
+    c.beginPath();
+    c.moveTo(x, R_GROUND + 1); c.lineTo(x + 2 + hash(i + 4) * 2, R_GROUND - h); c.lineTo(x + 4, R_GROUND + 1);
+    c.closePath(); c.fill();
+  }
+  // wavy dark edge where the grass meets the dirt
+  c.fillStyle = rgb(shade([58, 110, 52], env));
+  for (let i = Math.floor(off / 12) - 1; i <= Math.floor((off + R_W) / 12) + 1; i++){
+    const x = i * 12 - off;
+    c.beginPath(); c.arc(x + 6, R_GROUND + 9, 4 + hash(i + 8) * 2, 0, Math.PI); c.fill();
+  }
+}
+
+function drawBackground(c, env){
+  // sky
+  const g = c.createLinearGradient(0, 0, 0, R_GROUND);
+  g.addColorStop(0, rgb(env.top));
+  g.addColorStop(1, rgb(env.bot));
+  c.fillStyle = g;
+  c.fillRect(-20, -20, R_W + 40, R_GROUND + 22);
+
+  // stars fade in at night and twinkle
+  if (env.night > 0.02){
+    c.fillStyle = "#fff";
+    STARS.forEach(s => {
+      c.globalAlpha = env.night * (0.6 + 0.4 * Math.sin(rTime * 2 + s.tw));
+      c.beginPath(); c.arc(s.x, s.y, s.r, 0, 6.283); c.fill();
+    });
+    c.globalAlpha = 1;
+  }
+
+  // sun and moon travel across the sky as the score goes up
+  const a = env.phase * Math.PI * 2;
+  const sunX = R_W / 2 + Math.sin(a) * R_W * 0.42, sunY = 205 - Math.cos(a) * 175;
+  const moonX = R_W / 2 - Math.sin(a) * R_W * 0.42, moonY = 205 + Math.cos(a) * 175;
+  if (sunY < 235) drawSun(c, sunX, sunY);
+  if (moonY < 235) drawMoon(c, moonX, moonY);
+
+  // clouds
+  const cloudCol = rgb(mixRGB(mixRGB([255, 255, 255], env.bot, 0.3), [24, 30, 66], env.night * 0.75));
+  clouds.forEach(cl => drawCloud(c, cl.x, cl.y, cl.s, cloudCol, 0.9));
+
+  // mountain layers: colours are mixed from the sky colour so they always match the time of day
+  drawMountains(c, 0.05, 192, 82, 1.0, rgb(mixRGB(env.bot, [34, 46, 92], 0.38)));
+  drawMountains(c, 0.13, 208, 62, 2.7, rgb(mixRGB(env.bot, [24, 34, 70], 0.58)));
+
+  // soft haze near the horizon
+  const haze = c.createLinearGradient(0, R_GROUND - 70, 0, R_GROUND);
+  haze.addColorStop(0, `rgba(${env.bot[0] | 0},${env.bot[1] | 0},${env.bot[2] | 0},0)`);
+  haze.addColorStop(1, `rgba(${env.bot[0] | 0},${env.bot[1] | 0},${env.bot[2] | 0},0.55)`);
+  c.fillStyle = haze;
+  c.fillRect(-20, R_GROUND - 70, R_W + 40, 71);
+
+  drawTrees(c, env);
+  drawGround(c, env);
+}
+
+// ---------- OBSTACLES ----------
+function drawRock(c, o){
+  const x = o.x, y = R_GROUND + 2, w = o.w, h = o.h, j = o.j;
+  const P = [[0, 0], [0.04, -0.32 + j[0] * 0.1], [0.18, -0.7 + j[1] * 0.1], [0.4, -1.0],
+             [0.66, -0.9 + j[2] * 0.1], [0.9, -0.5 + j[3] * 0.1], [1, 0]].map(p => [x + p[0] * w, y + p[1] * h]);
+  const g = c.createLinearGradient(x, y - h, x + w, y);
+  g.addColorStop(0, "#a4a9b6"); g.addColorStop(1, "#4a4f5c");
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(P[0][0], P[0][1]); P.forEach(p => c.lineTo(p[0], p[1])); c.closePath(); c.fill();
+  // light facet (top left) and shadow facet (right)
+  c.fillStyle = "rgba(255,255,255,0.20)";
+  c.beginPath(); c.moveTo(P[1][0], P[1][1]); c.lineTo(P[2][0], P[2][1]); c.lineTo(P[3][0], P[3][1]);
+  c.lineTo(x + w * 0.34, y - h * 0.5); c.closePath(); c.fill();
+  c.fillStyle = "rgba(0,0,0,0.22)";
+  c.beginPath(); c.moveTo(P[4][0], P[4][1]); c.lineTo(P[5][0], P[5][1]); c.lineTo(P[6][0], P[6][1]);
+  c.lineTo(x + w * 0.62, y - h * 0.12); c.closePath(); c.fill();
+  // cracks
+  c.strokeStyle = "rgba(30,32,40,0.55)"; c.lineWidth = 1.2; c.lineCap = "round";
+  c.beginPath(); c.moveTo(x + w * 0.45, y - h * 0.95); c.lineTo(x + w * 0.5, y - h * 0.6); c.lineTo(x + w * 0.42, y - h * 0.35); c.stroke();
+  c.beginPath(); c.moveTo(x + w * 0.5, y - h * 0.6); c.lineTo(x + w * 0.62, y - h * 0.5); c.stroke();
+  // outline + moss on top
+  c.strokeStyle = "#2f323b"; c.lineWidth = 1.6; c.lineJoin = "round";
+  c.beginPath(); c.moveTo(P[0][0], P[0][1]); P.forEach(p => c.lineTo(p[0], p[1])); c.closePath(); c.stroke();
+  c.fillStyle = "#5fae5a";
+  c.beginPath(); c.ellipse(x + w * 0.42, y - h * 0.97, w * 0.16, 3, -0.1, 0, 6.283); c.fill();
+}
+function drawCactus(c, o){
+  const x = o.x, y = R_GROUND + 1, w = o.w, h = o.h;
+  const cx = x + w / 2, tw = w * 0.34, aw = tw * 0.72;
+  const armY1 = y - h * 0.42, armY2 = y - h * 0.74;
+  c.lineCap = "round"; c.lineJoin = "round";
+  // Each part is stroked 3 times: dark, medium, then a thin light line = rounded 3D look
+  function part(drawPath, width){
+    [["#2b7038", 0, 0], ["#3c9650", 0, -3.2], ["#66c479", -width * 0.16, -width * 0.6]].forEach(s => {
+      c.strokeStyle = s[0];
+      c.lineWidth = Math.max(1.5, width + s[2]);
+      c.save(); c.translate(s[1], 0); drawPath(); c.restore();
+    });
+  }
+  // left arm
+  part(() => { c.beginPath(); c.moveTo(cx, armY1); c.lineTo(x + aw / 2, armY1); c.lineTo(x + aw / 2, armY2); c.stroke(); }, aw);
+  // optional right arm (lower and shorter)
+  if (o.rightArm){
+    part(() => { c.beginPath(); c.moveTo(cx, armY1 - 12); c.lineTo(x + w - aw / 2, armY1 - 12); c.lineTo(x + w - aw / 2, armY1 - 12 - h * 0.2); c.stroke(); }, aw);
+  }
+  // trunk
+  part(() => { c.beginPath(); c.moveTo(cx, y); c.lineTo(cx, y - h + tw / 2); c.stroke(); }, tw);
+  // ribs
+  c.strokeStyle = "rgba(15,55,25,0.35)"; c.lineWidth = 1;
+  [-0.22, 0.22].forEach(k => { c.beginPath(); c.moveTo(cx + tw * k, y - 3); c.lineTo(cx + tw * k * 0.8, y - h + tw * 0.6); c.stroke(); });
+  // spines
+  c.fillStyle = "#e9f4d0";
+  for (let i = 0; i < 9; i++){
+    const sy = y - 6 - i * (h - 12) / 9, side = i % 2 ? 1 : -1;
+    c.fillRect(cx + side * tw * 0.5 - 0.5, sy, 1.4, 1.4);
+  }
+  // little flower on top
+  c.fillStyle = "#ff6f9c"; c.beginPath(); c.arc(cx, y - h + 1, 4.2, 0, 6.283); c.fill();
+  c.fillStyle = "#ffd84a"; c.beginPath(); c.arc(cx, y - h + 1, 1.6, 0, 6.283); c.fill();
+}
+function drawSpikes(c, o){
+  const x = o.x, y = R_GROUND + 1, w = o.w, h = o.h;
+  const n = Math.max(3, Math.round(w / 14)), sw = w / n;
+  // metal base plate
+  const bg = c.createLinearGradient(0, y - 9, 0, y);
+  bg.addColorStop(0, "#5a606e"); bg.addColorStop(1, "#2a2e37");
+  c.fillStyle = bg; rr(c, x - 1, y - 9, w + 2, 9, 2); c.fill();
+  c.fillStyle = "#c9ced9";                                       // rivets
+  for (let i = 0; i < n; i++){ c.beginPath(); c.arc(x + sw * (i + 0.5), y - 4.5, 1.1, 0, 6.283); c.fill(); }
+  // spikes: light left half + dark right half = shiny metal
+  for (let i = 0; i < n; i++){
+    const xl = x + i * sw + 1, xr = x + (i + 1) * sw - 1, xm = (xl + xr) / 2, by = y - 8, ty = y - h;
+    c.fillStyle = "#e4e8f1"; c.beginPath(); c.moveTo(xl, by); c.lineTo(xm, ty); c.lineTo(xm, by); c.closePath(); c.fill();
+    c.fillStyle = "#8b93a6"; c.beginPath(); c.moveTo(xm, ty); c.lineTo(xr, by); c.lineTo(xm, by); c.closePath(); c.fill();
+    c.strokeStyle = "#4b5060"; c.lineWidth = 1; c.beginPath(); c.moveTo(xl, by); c.lineTo(xm, ty); c.lineTo(xr, by); c.stroke();
+    c.fillStyle = "#fff"; c.beginPath(); c.arc(xm - 0.5, ty + 3, 1, 0, 6.283); c.fill();   // shiny tip
+  }
+}
+function drawCrates(c, o){
+  const s = 40, x = o.x, y = R_GROUND + 1;
+  for (let k = 0; k < o.n; k++){
+    const top = y - (k + 1) * s;
+    c.fillStyle = "#b98047"; c.fillRect(x, top, s, s);                   // wood
+    c.fillStyle = "rgba(0,0,0,0.13)";                                    // plank gaps
+    [s * 0.25, s * 0.5, s * 0.75].forEach(py => c.fillRect(x + 4, top + py, s - 8, 1.4));
+    c.strokeStyle = "#6d4626"; c.lineWidth = 3; c.strokeRect(x + 1.5, top + 1.5, s - 3, s - 3);   // frame
+    c.lineWidth = 2.4; c.beginPath();                                                              // diagonal brace
+    c.moveTo(x + 4, top + 4); c.lineTo(x + s - 4, top + s - 4); c.stroke();
+    c.fillStyle = "#d8a76b"; c.fillRect(x + 2, top + 2, s - 4, 1.6);    // light top edge
+    c.fillStyle = "#e0dad0";                                             // nails
+    [[5, 5], [s - 5, 5], [5, s - 5], [s - 5, s - 5]].forEach(p => { c.beginPath(); c.arc(x + p[0], top + p[1], 1.3, 0, 6.283); c.fill(); });
+  }
+}
+function drawObstacle(c, o){
+  // soft shadow under it
+  c.fillStyle = "rgba(0,0,0,0.22)";
+  c.beginPath(); c.ellipse(o.x + o.w / 2 + 3, R_GROUND + 3, o.w * 0.62, 4, 0, 0, 6.283); c.fill();
+  if (o.kind === "rock") drawRock(c, o);
+  else if (o.kind === "cactus") drawCactus(c, o);
+  else if (o.kind === "spikes") drawSpikes(c, o);
+  else drawCrates(c, o);
+}
+
+// ---------- COINS ----------
+function drawCoin(c, x, y, t){
+  const rx = 2.2 + 6.8 * Math.abs(Math.cos(t * 4));           // squeezes thin as it "spins"
+  const glow = c.createRadialGradient(x, y, 2, x, y, 17);
+  glow.addColorStop(0, "rgba(255,215,90,0.38)");
+  glow.addColorStop(1, "rgba(255,215,90,0)");
+  c.fillStyle = glow;
+  c.beginPath(); c.arc(x, y, 17, 0, 6.283); c.fill();
+  const cg = c.createLinearGradient(x - rx, y - 9, x + rx, y + 9);
+  cg.addColorStop(0, "#fff2a8"); cg.addColorStop(0.5, "#f5c02b"); cg.addColorStop(1, "#c98a10");
+  c.fillStyle = cg;
+  c.beginPath(); c.ellipse(x, y, rx, 9, 0, 0, 6.283); c.fill();
+  c.strokeStyle = "#a8700c"; c.lineWidth = 1.3; c.stroke();
+  if (rx > 5){
+    c.strokeStyle = "rgba(168,112,12,0.7)"; c.lineWidth = 1;
+    c.beginPath(); c.ellipse(x, y, rx * 0.6, 5.6, 0, 0, 6.283); c.stroke();
+  }
+}
+
+// ---------- THE HERO ----------
+// A limb made of two bones (like an upper arm + forearm). Angles are measured
+// from "straight down"; positive swings forward (to the right).
+function limb(c, x0, y0, a1, l1, a2, l2, width, color){
+  const x1 = x0 + Math.sin(a1) * l1, y1 = y0 + Math.cos(a1) * l1;
+  const x2 = x1 + Math.sin(a2) * l2, y2 = y1 + Math.cos(a2) * l2;
+  c.strokeStyle = color; c.lineWidth = width; c.lineCap = "round"; c.lineJoin = "round";
+  c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+  return { x2: x2, y2: y2 };
+}
+// A ribbon that ripples in the wind. We work out a wavy centre line, then
+// fill a smooth shape around it that gets thinner toward the tip.
+function scarfTail(c, x0, y0, segs, segLen, waveOff, widthStart, pose, color){
+  const pts = [[x0, y0]];
+  let px = x0, py = y0;
+  for (let s = 1; s <= segs; s++){
+    const wave = Math.sin(pose.time * 14 - s * 0.8 + waveOff) * (0.8 + s * 0.5);
+    px -= segLen;
+    py += wave * 0.55 - pose.vy * 0.0055;         // drifts down when rising, up when falling
+    pts.push([px, py]);
+  }
+  const top = [], bot = [];
+  pts.forEach((p, i) => {
+    const w = lerp(widthStart, 0.6, i / segs) / 2;
+    top.push([p[0], p[1] - w]);
+    bot.push([p[0], p[1] + w]);
+  });
+  // draw a smooth curve through a list of points (quadratic curves between midpoints)
+  function curve(list){
+    for (let i = 1; i < list.length - 1; i++){
+      const mx = (list[i][0] + list[i + 1][0]) / 2, my = (list[i][1] + list[i + 1][1]) / 2;
+      c.quadraticCurveTo(list[i][0], list[i][1], mx, my);
+    }
+    const last = list[list.length - 1];
+    c.lineTo(last[0], last[1]);
+  }
+  c.fillStyle = color;
+  c.beginPath();
+  c.moveTo(top[0][0], top[0][1]);
+  curve(top);
+  curve(bot.slice().reverse());
+  c.closePath();
+  c.fill();
+  // thin light stripe down the middle for a silky look
+  c.strokeStyle = "rgba(255,255,255,0.22)";
+  c.lineWidth = 0.9;
+  c.beginPath();
+  c.moveTo(pts[0][0], pts[0][1]);
+  curve(pts);
+  c.stroke();
+}
+function drawHero(c, cx, feetY, pose){
+  const SUIT = "#2d3352", SUIT_DARK = "#1d2136", RED = "#d9463c", SKIN = "#f1c9a5";
+  c.save();
+  c.translate(cx, feetY);                                   // (0,0) is now the hero's feet
+  if (pose.rot){                                            // tumble when hit
+    const k = Math.min(1, Math.abs(pose.rot) / 1.5);
+    c.translate(0, 16 * k);
+    c.translate(0, -26); c.rotate(pose.rot); c.translate(0, 26);
+  }
+  c.scale(1 / pose.squash, pose.squash);                    // squash & stretch
+
+  // ----- work out the leg poses -----
+  const L1 = 12, L2 = 12;
+  const legs = [];
+  for (let i = 0; i < 2; i++){
+    let th, kn;
+    if (pose.air){
+      const rising = pose.vy < 0;
+      if (i === 0){ th = rising ? 1.0 : 0.55;  kn = rising ? 1.5 : 0.5; }     // front leg tucked
+      else        { th = rising ? -0.35 : -0.5; kn = rising ? 1.0 : 0.35; }   // back leg trails
+    } else {
+      const p = pose.phase + i * Math.PI;                   // the two legs are half a cycle apart
+      th = Math.sin(p) * 0.95;                              // swing back and forth
+      kn = Math.max(0, Math.cos(p)) * 1.4;                  // knee bends while the leg swings forward
+    }
+    legs.push({ th: th, sh: th - kn });
+  }
+  // put the hips at the height where the lowest foot just touches the ground
+  let low = 0;
+  legs.forEach(l => { l.fy = Math.cos(l.th) * L1 + Math.cos(l.sh) * L2; low = Math.max(low, l.fy); });
+  const hipY = -low - 1;
+
+  // ----- body positions -----
+  const lean = pose.air ? 0.1 : 0.2;
+  const shx = Math.sin(lean) * 17, shy = hipY - Math.cos(lean) * 17;         // shoulder
+  const hx = shx + Math.sin(lean) * 7 + 1.5, hy = shy - Math.cos(lean) * 7.5 - 1;  // head centre
+
+  // ----- arms poses -----
+  const arms = [];
+  for (let i = 0; i < 2; i++){
+    let ua, fa;
+    if (pose.air){
+      if (i === 0){ ua = 1.7; fa = 2.1; } else { ua = -1.3; fa = -0.9; }       // one arm forward, one back
+    } else {
+      const q = pose.phase + (i + 1) * Math.PI;             // arms swing opposite to the legs
+      ua = Math.sin(q) * 1.0;
+      fa = ua + 0.9 + 0.5 * Math.max(0, Math.sin(q));       // elbows bent forward
+    }
+    arms.push({ ua: ua, fa: fa });
+  }
+  function drawArm(i, color){
+    const end = limb(c, shx, shy + 1.5, arms[i].ua, 8, arms[i].fa, 8, 4.6, color);
+    c.fillStyle = RED;                                      // red glove
+    c.beginPath(); c.arc(end.x2, end.y2, 2.8, 0, 6.283); c.fill();
+  }
+  function drawLeg(i, color){
+    const end = limb(c, 0, hipY, legs[i].th, L1, legs[i].sh, L2, 6.2, color);
+    c.fillStyle = RED;                                      // red boot
+    c.beginPath(); c.ellipse(end.x2 + 2.2, end.y2 - 0.5, 5.6, 3.3, 0, 0, 6.283); c.fill();
+    c.fillStyle = "#7d2019";
+    c.fillRect(end.x2 - 3, end.y2 + 2, 10, 1.2);           // sole
+  }
+
+  // ----- draw back to front -----
+  drawArm(1, SUIT_DARK);
+  drawLeg(1, SUIT_DARK);
+
+  // long scarf streaming behind
+  const segLen = 4.4 + pose.speed * 0.006;
+  c.save();
+  c.translate(shx, shy); c.rotate(-(pose.rot || 0) * 0.9); c.translate(-shx, -shy);   // keeps it from drooping into the ground
+  scarfTail(c, shx - 1, shy - 2.0, 7, segLen * 0.85, 1.7, 4.4, pose, "#a8322b");   // back (darker) tail
+  scarfTail(c, shx - 1, shy - 0.5, 9, segLen, 0, 6.4, pose, "#e2554a");           // front tail
+  c.restore();
+
+  // torso + belt + chest emblem
+  c.strokeStyle = SUIT; c.lineWidth = 11; c.lineCap = "round";
+  c.beginPath(); c.moveTo(0, hipY); c.lineTo(shx, shy); c.stroke();
+  c.save(); c.translate(0, hipY); c.rotate(lean);
+  c.fillStyle = RED; rr(c, -6.5, -3.5, 13, 4.6, 2); c.fill();
+  c.fillStyle = "#f2c94c"; c.fillRect(-1.3, -3.2, 2.6, 4);   // belt buckle
+  c.restore();
+  c.fillStyle = RED;
+  c.beginPath(); c.arc(shx * 0.5 + 1.2, (hipY + shy) / 2 - 1, 2.7, 0, 6.283); c.fill();
+
+  drawLeg(0, SUIT);
+
+  // scarf knot at the neck
+  c.fillStyle = "#e85b4e"; c.beginPath(); c.arc(shx - 0.5, shy - 2, 3.6, 0, 6.283); c.fill();
+
+  // head: hood, headband, face and eye
+  c.save();
+  c.beginPath(); c.arc(hx, hy, 8.3, 0, 6.283);
+  c.fillStyle = SUIT; c.fill();
+  c.clip();                                                  // anything below stays inside the hood
+  c.fillStyle = RED; c.fillRect(hx - 10, hy - 5.6, 20, 3.6); // red headband
+  c.fillStyle = "rgba(255,255,255,0.13)"; c.fillRect(hx - 10, hy - 5.6, 20, 1);
+  c.restore();
+  c.fillStyle = SKIN;                                        // face opening
+  c.beginPath(); c.ellipse(hx + 3.4, hy + 1.6, 5, 3.4, 0, 0, 6.283); c.fill();
+  c.fillStyle = "#fff";                                      // eye
+  c.beginPath(); c.ellipse(hx + 5.3, hy + 1.1, 1.9, 2.1, 0, 0, 6.283); c.fill();
+  c.fillStyle = "#161824";
+  c.beginPath(); c.arc(hx + 5.9, hy + 1.2, 1.05, 0, 6.283); c.fill();
+  c.strokeStyle = "rgba(255,255,255,0.14)"; c.lineWidth = 1.4;   // hood highlight
+  c.beginPath(); c.arc(hx, hy, 6.8, 3.6, 4.6); c.stroke();
+
+  drawArm(0, SUIT);
+  c.restore();
+}
+
+// ---------- HUD + SCREENS ----------
+function drawSpeaker(c, x, y, muted){
+  c.fillStyle = "rgba(0,0,0,0.38)";
+  c.beginPath(); c.arc(x, y, 17, 0, 6.283); c.fill();
+  c.fillStyle = "#eef0f2";
+  c.beginPath();
+  c.moveTo(x - 8, y - 3); c.lineTo(x - 4, y - 3); c.lineTo(x + 1, y - 7);
+  c.lineTo(x + 1, y + 7); c.lineTo(x - 4, y + 3); c.lineTo(x - 8, y + 3);
+  c.closePath(); c.fill();
+  c.strokeStyle = "#eef0f2"; c.lineWidth = 1.8; c.lineCap = "round";
+  if (muted){
+    c.beginPath(); c.moveTo(x + 5, y - 4); c.lineTo(x + 11, y + 4); c.moveTo(x + 11, y - 4); c.lineTo(x + 5, y + 4); c.stroke();
+  } else {
+    c.beginPath(); c.arc(x + 1, y, 6, -0.9, 0.9); c.stroke();
+    c.beginPath(); c.arc(x + 1, y, 10, -0.9, 0.9); c.stroke();
+  }
+}
+function drawHUD(c){
+  drawSpeaker(c, 29, 27, rMuted);
+  // coin counter
+  c.fillStyle = "rgba(0,0,0,0.38)"; rr(c, 54, 10, 74, 34, 17); c.fill();
+  drawCoin(c, 74, 27, 0.4);
+  c.fillStyle = "#fff"; c.font = "700 17px system-ui, sans-serif"; c.textAlign = "left"; c.textBaseline = "middle";
+  c.fillText(String(rCoins), 92, 28);
+  // score panel
+  c.fillStyle = "rgba(0,0,0,0.38)"; rr(c, R_W - 206, 10, 194, 34, 17); c.fill();
+  c.fillStyle = "rgba(255,255,255,0.65)"; c.font = "600 12px system-ui, sans-serif"; c.textAlign = "left";
+  c.fillText("HI " + String(rBest).padStart(5, "0"), R_W - 192, 28);
+  c.fillStyle = "#fff"; c.font = "700 21px 'Courier New', monospace"; c.textAlign = "right";
+  c.fillText(String(Math.floor(rScore)).padStart(5, "0"), R_W - 24, 28);
+  c.textBaseline = "alphabetic";
+}
+function drawScreens(c){
+  c.textAlign = "center";
+  if (rState === "ready"){
+    c.fillStyle = "rgba(0,0,0,0.18)"; c.fillRect(0, 0, R_W, R_H);
+    c.font = "italic 400 58px Georgia, 'Times New Roman', serif";
+    c.fillStyle = "rgba(0,0,0,0.35)"; c.fillText("Runner", R_W / 2 + 3, 108 + 3);
+    c.fillStyle = "#fff"; c.fillText("Runner", R_W / 2, 108);
+    c.fillStyle = "#d9463c"; c.fillRect(R_W / 2 - 46, 120, 92, 3);
+    c.globalAlpha = 0.6 + 0.4 * Math.sin(rTime * 4);
+    c.fillStyle = "#fff"; c.font = "600 19px system-ui, sans-serif";
+    c.fillText("Press Space or tap to start", R_W / 2, 158);
+    c.globalAlpha = 0.75; c.font = "500 13px system-ui, sans-serif";
+    c.fillText("Hold to jump higher  ·  M to mute", R_W / 2, 182);
+    c.globalAlpha = 1;
+  } else if (rState === "over"){
+    c.fillStyle = "rgba(6,8,20,0.5)"; c.fillRect(0, 0, R_W, R_H);
+    c.fillStyle = "#fff"; c.font = "italic 400 44px Georgia, 'Times New Roman', serif";
+    c.fillText("Game over", R_W / 2, 100);
+    c.font = "600 20px system-ui, sans-serif";
+    c.fillText("Score " + Math.floor(rScore) + "   ·   Coins " + rCoins, R_W / 2, 138);
+    if (newBest){
+      c.fillStyle = "#ffd84a"; c.font = "800 18px system-ui, sans-serif";
+      c.fillText("★  New best!  ★", R_W / 2, 168);
+    } else {
+      c.fillStyle = "rgba(255,255,255,0.7)"; c.font = "500 15px system-ui, sans-serif";
+      c.fillText("Best " + rBest, R_W / 2, 168);
+    }
+    c.globalAlpha = 0.6 + 0.4 * Math.sin(rTime * 4);
+    c.fillStyle = "#fff"; c.font = "600 16px system-ui, sans-serif";
+    c.fillText("Space or tap to try again", R_W / 2, 204);
+    c.globalAlpha = 1;
+  }
+}
+
+function renderRunner(){
+  const c = rctx;
+  const phase = rState === "ready" ? 0 : (rScore % DAY_LEN) / DAY_LEN;
+  const sky = skyAt(phase);
+  const env = { phase: phase, top: sky.top, bot: sky.bot, night: clamp01(-Math.cos(phase * 6.283185) * 1.5 - 0.05) };
+
+  c.save();
+  if (rShake > 0.3) c.translate((Math.random() - 0.5) * rShake, (Math.random() - 0.5) * rShake);
+
+  drawBackground(c, env);
+
+  // shadow under the hero (smaller + fainter the higher you are)
+  const height = Math.max(0, R_GROUND - (hero.y + hero.h));
+  const sh = 1 - Math.min(height / 140, 0.65);
+  c.fillStyle = `rgba(0,0,0,${0.32 * sh})`;
+  c.beginPath(); c.ellipse(hero.x + hero.w / 2, R_GROUND + 3, 15 * sh, 4 * sh, 0, 0, 6.283); c.fill();
+
+  obstacles.forEach(o => drawObstacle(c, o));
+  coinList.forEach(k => drawCoin(c, k.x, k.y, rTime + k.ph));
+
+  drawHero(c, hero.x + hero.w / 2, hero.y + hero.h, {
+    phase: animPhase,
+    air: !hero.onGround || rState === "over",
+    vy: hero.vy,
+    rot: rState === "over" ? -Math.min(deathT * 5, 1.5) : 0,
+    squash: squash,
+    speed: rState === "playing" ? rSpeed : 220,
+    time: rTime
+  });
+
+  drawParticles(c);
+
+  // foreground grass tufts that zip past faster than everything else
+  const off = rScroll * 1.5;
+  c.fillStyle = rgb(shade([40, 92, 46], env));
+  for (let i = Math.floor(off / 130) - 1; i <= Math.floor((off + R_W) / 130) + 1; i++){
+    const x = i * 130 + hash(i + 5) * 90 - off, h = 9 + hash(i + 6) * 8;
+    for (let b = 0; b < 3; b++){
+      c.beginPath();
+      c.moveTo(x + b * 5, R_H + 2); c.lineTo(x + b * 5 + 2 + (b - 1) * 2, R_H - h + (b === 1 ? 0 : 4)); c.lineTo(x + b * 5 + 4, R_H + 2);
+      c.closePath(); c.fill();
+    }
+  }
+
+  // speed lines when you're going fast
+  if (rState === "playing" && rSpeed > 480){
+    c.strokeStyle = `rgba(255,255,255,${0.10 * clamp01((rSpeed - 480) / 200)})`;
+    c.lineWidth = 1.5;
+    for (let k = 0; k < 5; k++){
+      const x = R_W - ((rTime * 1400 + k * 210) % (R_W + 200)) + 100, y = 30 + k * 42 + hash(k + 40) * 16;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + 70 + hash(k + 50) * 60, y); c.stroke();
+    }
+  }
+  c.restore();
+
+  if (rFlash > 0){ c.fillStyle = `rgba(255,255,255,${rFlash * 0.7})`; c.fillRect(0, 0, R_W, R_H); }
+  drawHUD(c);
+  drawScreens(c);
+}
+
+// ---------- THE GAME LOOP ----------
+// The browser calls this ~60 times a second: update, draw, repeat.
+function runnerLoop(ts){
+  // Cap dt so if the browser pauses the tab, the game doesn't jump forward
+  const dt = Math.min((ts - rLast) / 1000, 0.05);
+  rLast = ts;
+  rTime += dt;
+  stepRunner(dt);
+  renderRunner();
+  rFrameId = requestAnimationFrame(runnerLoop);   // ask for the next frame
+}
+function startRunnerLoop(){
+  if (rFrameId) return;                 // already running
+  rLast = performance.now();
+  rFrameId = requestAnimationFrame(runnerLoop);
+}
+function stopRunnerLoop(){
+  cancelAnimationFrame(rFrameId);
+  rFrameId = null;
+}
+
+// ---------- TAB SWITCHING ----------
+// Every OTHER tab's show function calls this (the hideRunner(); line).
+function hideRunner(){
+  stopRunnerLoop();                     // stop using CPU while you're on another tab
+  jumpHeld = false;
+  rState = "ready";
+  runnerPanelEl.classList.add("hidden");
+  showRunnerBtn.classList.remove("active");
+}
+
+function showRunner(){
+  wordleGameEl.classList.add("hidden");
+  scrambleGameEl.classList.add("hidden");
+  leaderboardPanelEl.classList.add("hidden");
+  chessPanelEl.classList.add("hidden");
+  showWordleBtn.classList.remove("active");
+  showScrambleBtn.classList.remove("active");
+  showLeaderboardBtn.classList.remove("active");
+  showChessBtn.classList.remove("active");
+  showRunnerBtn.classList.add("active");
+  stopLeaderboardPolling();
+  runnerPanelEl.classList.remove("hidden");
+  resetRunner();
+  rState = "ready";
+  startRunnerLoop();
+}
+showRunnerBtn.addEventListener("click", showRunner);
+
+updateStreakDisplay();
+</script>
+</body>
+</html>
